@@ -30,19 +30,19 @@ def hello_world():
         
         for line in list(graph):
             if line['parent'] == commit.sha:
-                last = line['d'].pop()
-                if last['type'] == 'v' or last['type'] == 'M':
-                    line['d'].append(last)
+                #draw the closing line into this commit
+                #last = line['d'].pop()
+                #if last['type'] == 'v' or last['type'] == 'M':
+                #    line['d'].append(last)
                 line['d'].append({'type': 'L', 'x': pos, 'y': currentY})
                 commits.append(dict(line, type='path'))
                 graph.remove(line)
-                branches[pos] = ''
             else:
                 line['d'].append({'type': 'v', 'y': 1})
         
+        delete = True
         if commit.parents:
             append = False
-            delete = True
             for parent in commit.parents:
                 if parent.sha not in branches:
                     delete = False
@@ -67,7 +67,16 @@ def hello_world():
         else:
             del branches[pos] #this branch has no parent, delete it
         commits.append({'type': 'circle', 'x': pos, 'y': currentY, 'id': commit.sha, 'parents':[x.sha for x in commit.parents]})
-        commits.append({'type': 'text', 'x': len(branches), 'y': currentY, 'content': "{msg} (this = {commit}, branches = {br})".format(msg=commit.message_short, br=', '.join([ x[:10] for x in branches]), commit=commit.sha[:10])})
+        textX = len(branches)
+        for branch in reversed(branches):
+            if branch == '':
+                textX -= 1
+            else:
+                break
+        if delete:
+            #clear out this branch for future use
+            branches[pos] = ''
+        commits.append({'type': 'text', 'x': textX, 'y': currentY, 'content': "{msg}".format(msg=commit.message_short)})
         #response += "<br />"
         currentY += 1
     for incomplete in graph:

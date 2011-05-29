@@ -6,8 +6,11 @@
   <style type="text/css">
   .edge {
     fill: none;
-    stroke-width: 2;
+    stroke-width: 3;
     z-index: 1;
+  }
+  path.highlight {
+    stroke-width: 4;
   }
   .col_0 {
     stroke: #5FA60F;
@@ -50,7 +53,7 @@
           {{elem.type}}{% if elem.x is defined %}{{elem.x * 20}}{{' '}}{% endif %}{% if elem.y is defined %}{{elem.y * 20}}{{' '}}{% endif %}
         {%- endfor %}" style="" onmouseover="highlight(evt,['{{commit.parent}}'],'blue');" onmouseout="unhighlight(evt,['{{commit.parent}}'])" />
       {% elif commit.type == "text" %}
-        <text x="{{commit.x * 20}}" y="{{commit.y * 20 + 3}}" font-size="12">{{commit.content}}</text>
+        <text x="{{commit.x * 20}}" y="{{commit.y * 20 + 3}}" font-size="14">{{commit.content}}</text>
       {% elif commit.type == "circle" %}
         <circle id="{{commit.id}}" cx="{{commit.x * 20}}" cy="{{commit.y * 20}}" r="5" fill="white" stroke="black" stroke-width="1" style="z-index:1;"
          onmouseover="highlight(evt,['{{commit.parents|join("', '")}}'], 'yellow');" onmouseout="unhighlight(evt,['{{commit.parents|join("', '")}}']);" />

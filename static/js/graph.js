@@ -4,6 +4,7 @@ function highlight(event, ids, colour) {
   for(var index in ids) {
     jQ('#' + ids[index], svg).attr('fill', colour);
   }
+  jQ(event.target).addClass('highlight');
 }
 
 function unhighlight(event, ids) {
@@ -12,4 +13,5 @@ function unhighlight(event, ids) {
   for(var index in ids) {
     jQ('#' + ids[index], svg).attr('fill', 'white');
   }
+  jQ(event.target).removeClass('highlight');
 }
