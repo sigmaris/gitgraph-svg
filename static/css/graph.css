@@ -1,0 +1,35 @@
+.edge {
+  fill: none;
+  stroke-width: 3;
+  z-index: 1;
+}
+path.highlight {
+  stroke-width: 4;
+}
+circle, .label {
+  cursor: pointer;
+}
+.col_0 {
+  stroke: #D77001;
+}
+.col_1 {
+  stroke: #2A5E98;
+}
+.col_2 {
+  stroke: #F12B4D;
+}
+.col_3 {
+  stroke: #6F4879;
+}
+.col_4 {
+  stroke: #CFAD0A;
+}
+.col_5 {
+  stroke: #5FA60F;
+}
+.col_6 {
+  stroke: #B41700;
+}
+.col_7 {
+  stroke: #66D9CF;
+}

@@ -1,0 +1,11 @@
+<div>
+  <script type="text/javascript">
+  //<![CDATA[
+  gitgraph.initial_tree = {{initial_tree|safe}};
+  $('#left_tree').jstree('refresh');
+  //]]>
+  </script>
+  {% for file in changed_files %}
+  {% include "changed_file.html" %}
+  {% endfor %}
+</div>

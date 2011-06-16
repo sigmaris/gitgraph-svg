@@ -1,0 +1,117 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#toolbar {
+  width: 100%;
+  height: 50px;
+  position:fixed;
+  top: 0px;
+  left: 0px;
+  background-image: -moz-linear-gradient(#D0D0D0, #A8A8A8);
+  /* Safari 5.1+, Chrome 10+ */
+  background-image: -webkit-linear-gradient(#D0D0D0, #A8A8A8); 
+  /* Opera 11.10+ */
+  background-image: -o-linear-gradient(#D0D0D0, #A8A8A8);
+}
+
+#wrapper {
+  position: fixed;
+  top: 50px;
+  left: 0px;
+  bottom: 0px;
+  right: 0px;
+  width: 100%;
+  overflow: hidden;
+}
+
+#left_tree {
+  height: 100%;
+  overflow: auto;
+  float: left;
+  width: 30%;
+}
+
+#left_divider {
+  height: 100%;
+  float: left;
+  width: 0.3%;
+  max-width: 5px;
+  background-color: gray;
+  cursor: col-resize;
+}
+
+#right_container {
+  height: 100%;
+  float:right;
+  width: 69.7%;
+}
+
+#top_graph {
+  width: 100%;
+  height: 50%;
+  overflow: auto;
+}
+
+#mid_divider {
+  width: 100%;
+  height: 0.3%;
+  max-height: 5px;
+  background-color: gray;
+  cursor:row-resize;
+}
+
+#bottom_pane {
+  width: 100%;
+  height: 49.7%;
+  overflow: auto;
+}
+
+/** Diffs **/
+.filetable {
+  border: 1px solid gray;
+  display: inline-block;
+  width: 98%;
+  margin: 1%;
+  border-collapse: collapse;
+  border-spacing: 0px;
+}
+
+.filetable pre {
+  padding: 0px;
+  margin: 0px;
+  white-space: pre-wrap;       /* css-3 */
+  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+  white-space: -pre-wrap;      /* Opera 4-6 */
+  white-space: -o-pre-wrap;    /* Opera 7 */
+  word-wrap: break-word;       /* Internet Explorer 5.5+ */
+}
+
+.filetable td:last-child {
+  width: 100%;
+}
+
+.created, ins {
+  background-color: #CFC;
+  text-decoration: none;
+}
+
+.deleted, del {
+  background-color: #FCC;
+  text-decoration: none;
+}
+
+.modified, .replaced {
+  background-color: #FFEEBB;
+}
+
+.created .modified, .created .replaced {
+  background-color: #9E9;
+}
+
+.deleted .modified, .deleted .replaced {
+  background-color: #E99;
+}

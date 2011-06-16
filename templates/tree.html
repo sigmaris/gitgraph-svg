@@ -1,0 +1,27 @@
+<html><head><style>
+ins {
+  color: green;
+  text-decoration: none;
+}
+del {
+  color: red;
+  text-decoration: none;
+}
+span.replaced {
+  background-color: orange;
+}
+</style></head><body>
+<ul>
+  {% for entry in tree recursive %}
+  <li>
+    {{entry.name}}: {{entry.kind}}<br />
+    {% if entry.content %}
+    <pre>{{entry.content | join("") | safe }}</pre>
+    {% endif %}
+    {% if entry.children %}
+      <ul>{{ loop(entry.children) }}</ul>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+</body>

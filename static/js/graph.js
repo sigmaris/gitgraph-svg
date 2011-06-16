@@ -3,8 +3,8 @@ function highlight(event, ids, colour) {
   var svg = jQ(event.target).parents('svg');
   for(var index in ids) {
     jQ('#' + ids[index], svg).attr('fill', colour);
+    jQ('.parent_' + ids[index],svg).addClass('highlight');
   }
-  jQ(event.target).addClass('highlight');
 }
 
 function unhighlight(event, ids) {
@@ -12,6 +12,11 @@ function unhighlight(event, ids) {
   var svg = jQ(event.target).parents('svg'); 
   for(var index in ids) {
     jQ('#' + ids[index], svg).attr('fill', 'white');
+    jQ('.parent_' + ids[index],svg).removeClass('highlight');
   }
-  jQ(event.target).removeClass('highlight');
+}
+
+function load_commit(sha) {
+  var jQ = (window.parent ? window.parent.jQuery : window.jQuery); 
+  jQ('#bottom_pane').load('/sha/' + sha);
 }

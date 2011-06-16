@@ -1,0 +1,12 @@
+<table class="filetable">
+  <tbody>
+    {% for line in content -%}
+    <tr>
+      <td>
+        {{loop.index}}
+      </td>
+      <td><pre>{{line}}</pre></td>
+    </tr>
+    {%- endfor %}
+  </tbody>
+</table>
