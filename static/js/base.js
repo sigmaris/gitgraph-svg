@@ -32,10 +32,27 @@ function setupDraggables() {
       $('#mid_divider').css('top','');
     }
   });
-  
 }
 
+$(document).ajaxStart(function() {
+  gitgraph.loaderTimeout = setTimeout("$('.loader').show();", 100);
+});
+
+$(document).ajaxStop(function() {
+  $('.loader').hide();
+  if(gitgraph.loaderTimeout) {
+    clearTimeout(gitgraph.loaderTimeout);
+    delete gitgraph.loaderTimeout;
+  }
+});
+
+
 $(document).ready(function() {
+  
+  $.ajaxSetup({
+    traditional: true
+  });
+    
   $('#left_tree').jstree({
     "themes" : { "theme": "default", "url" : "/static/themes/default/style.css" },
     "json_data" : {
@@ -57,10 +74,21 @@ $(document).ready(function() {
           $('#bottom_pane').html(diff_content);
         } else {
           //Load content via AJAX.. trim off the # from href
-          $('#bottom_pane').load('/sha/' + a_element.attr('href').substring(1))
+          var compare_to = li_element.data('old_sha');
+          if(compare_to) {
+            data = {compare_to: compare_to};
+          } else {
+            data = {};
+          }
+          $('#bottom_pane').load('/sha/' + a_element.attr('href').substring(1), $.param(data));
         }
       }
     }
   });
+  
   setupDraggables();
+  
+  $('#reveal').click(function(event) {
+    $('#reveal_ajax').load('/graph/'+gitgraph.loaded_count, $.param({branches: gitgraph.existing_branches}, true));
+  })
 });

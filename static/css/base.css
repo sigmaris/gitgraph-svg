@@ -28,6 +28,19 @@ html, body {
   overflow: hidden;
 }
 
+.loader {
+  position: fixed;
+  display: none;
+  z-index: 100;
+  top: 50%;
+  left: 50%;
+  opacity: 0.6;
+  background: #000 url("/static/img/loader.gif") no-repeat center center;
+  border-radius: 8px;
+  width: 50px;
+  height: 50px;
+}
+
 #left_tree {
   height: 100%;
   overflow: auto;
@@ -70,6 +83,15 @@ html, body {
   overflow: auto;
 }
 
+#reveal {
+  width: 1.3em;
+  margin-left: auto;
+  margin-right: auto;
+  border: 1px solid black;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
 /** Diffs **/
 .filetable {
   border: 1px solid gray;
@@ -78,6 +100,8 @@ html, body {
   margin: 1%;
   border-collapse: collapse;
   border-spacing: 0px;
+  background-image: url("/static/img/sand.png");
+  box-shadow: 0 5px 9px -3px black;
 }
 
 .filetable pre {
@@ -90,8 +114,28 @@ html, body {
   word-wrap: break-word;       /* Internet Explorer 5.5+ */
 }
 
+.filetable hr {
+  border: 1px dashed gray;
+}
+
+.filetable thead tr:first-child, .filetable td {
+  border-bottom: 1px solid gray;
+}
+
+.filetable td {
+  padding: 0px 5px;
+  text-align: right;
+}
+
+.filetable tr:last-child td {
+  border-bottom: none;
+}
+
 .filetable td:last-child {
   width: 100%;
+  border-left: 1px solid gray;
+  border-bottom: none;
+  text-align: left;
 }
 
 .created, ins {

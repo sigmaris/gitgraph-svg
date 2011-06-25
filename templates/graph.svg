@@ -1,17 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="2000px" style="width:100%; height:2000px;">
-  <g transform="translate(10,10)">
-  {% for edge in edges %}
-    <path class="edge {{edge.class}} parent_{{edge.parent}}" d="{% for elem in edge.d -%}
-     {{elem.type}}{% if elem.x is defined %}{{elem.x * 20}}{{' '}}{% endif %}{% if elem.y is defined %}{{elem.y * 20}}{{' '}}{% endif %}
-     {%- endfor %}" onmouseover="highlight(evt,['{{edge.parent}}'],'blue');" onmouseout="unhighlight(evt,['{{edge.parent}}'])" />
-  {% endfor %}
-  {% for node in nodes %}
-    <circle id="{{node.id}}" cx="{{node.x * 20}}" cy="{{node.y * 20}}" r="5" fill="white" stroke="black" stroke-width="1" style="z-index:1;"
-       onmouseover="highlight(evt,['{{node.parents|join("', '")}}'], 'yellow');" onmouseout="unhighlight(evt,['{{node.parents|join("', '")}}']);"
-       onclick="load_commit('{{node.id}}')" />
-  {% endfor %}
-  {% for label in labels %}
-    <text id="label_{{label.sha}}" class="label" onclick="load_commit('{{label.sha}}')" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
-  {% endfor %}
-  </g>
-</svg>
+{% autoescape true %}
+{% for edge in edges %}
+  <path class="edge {{edge.class}} parent_{{edge.parent}}" d="{% for elem in edge.d -%}
+   {{elem.type}}{% if elem.x is defined %}{{elem.x * 20}}{{' '}}{% endif %}{% if elem.y is defined %}{{elem.y * 20}}{{' '}}{% endif %}
+   {%- endfor %}" onmouseover="highlight(evt,['{{edge.parent}}'],'blue');" onmouseout="unhighlight(evt,['{{edge.parent}}'])" />
+{% endfor %}
+{% for node in nodes %}
+  <circle id="{{node.id}}" cx="{{node.x * 20}}" cy="{{node.y * 20}}" r="5" fill="white" stroke="black" stroke-width="1" style="z-index:1;"
+     onmouseover="highlight(evt,['{{node.parents|join("', '")}}'], 'yellow');" onmouseout="unhighlight(evt,['{{node.parents|join("', '")}}']);"
+     onclick="load_commit('{{node.id}}')" />
+{% endfor %}
+{% for label in labels %}
+  <text id="label_{{label.sha}}" class="label" onclick="load_commit('{{label.sha}}')" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
+{% endfor %}
+{% endautoescape %}

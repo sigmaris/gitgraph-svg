@@ -123,13 +123,15 @@ def _all_deleted(lines):
 def _filter_context(lines, context):
     i = iter(lines)
     context_q = []
+    divider = False
     while True:
         try:
             (kind,num_old,num_new,line) = i.next()
             if kind == DiffEntry.CREATED or kind == DiffEntry.DELETED:
                 #flush context lines
-                if context_q:
-                    yield (DiffEntry.UNMODIFIED,0,0,'<hr />\n')
+                if divider:
+                    yield (DiffEntry.UNMODIFIED,0,0,'<hr />')
+                divider = True
                 for ctx_line in context_q:
                     yield ctx_line
                 
@@ -151,35 +153,6 @@ def _filter_context(lines, context):
         except StopIteration:
             break
 
-def commitdiff(repo, entry):
-    if entry.children:
-        for child in entry.children:
-            for result in commitdiff(repo, child):
-                yield result
-    elif not entry.reference:
-        if entry.kind == DiffEntry.CREATED:
-            entry_content = repo[entry.sha].read_raw()
-            if '\0' in entry_content:
-                #Binary file
-                yield {'name': entry.name, 'content': [(DiffEntry.CREATED,1,1,'(Binary file, created)')]}
-            else:
-                yield {'name': entry.name, 'content': _all_inserted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
-        elif entry.kind == DiffEntry.DELETED:
-            entry_content = repo[entry.sha].read_raw()
-            if '\0' in entry_content:
-                #Binary file
-                yield {'name': entry.name, 'content': [(DiffEntry.DELETED,1,1,'(Binary file, deleted)')]}
-            else:
-                yield {'name': entry.name, 'content': _all_deleted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
-        elif entry.kind == DiffEntry.MODIFIED:
-            #Use the already calculated diff in content
-            if not entry.content:
-                #Binary file
-                yield {'name': entry.name, 'content': [(DiffEntry.MODIFIED,1,1,'(Binary file, modified)')]}
-            else:
-                yield {'name': entry.name, 'content': _filter_context(entry.content, 3)}
-    return
-
 class DiffEntryEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, DiffEntry):
@@ -198,7 +171,10 @@ class DiffEntryEncoder(json.JSONEncoder):
             
             if hasattr(o, 'content') and o.content:
                 json_dict['metadata']['content'] = render_template('changed_file.html', file={'name': o.name, 'content': o.content})
-                        
+            
+            if hasattr(o, 'old_sha') and o.old_sha:
+                json_dict['metadata']['old_sha'] = o.old_sha
+            
             if o.children:
                 json_dict['children'] = o.children
                 typeclass = 'directory'
@@ -222,9 +198,46 @@ class DiffEntryEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, o)
 
 class TreeDiffer(object):
-    def __init__(self, compare_content=False):
+    def __init__(self, repo, compare_content=False):
+        self.repo = repo
         self.content = compare_content
         self.differ = difflib.Differ()
+    
+    def commitdiff(self, entry):
+        if entry.children:
+            for child in entry.children:
+                for result in self.commitdiff(child):
+                    yield result
+        elif not entry.reference:
+            if entry.kind == DiffEntry.CREATED:
+                entry_content = self.repo[entry.sha].read_raw()
+                if '\0' in entry_content:
+                    #Binary file
+                    yield {'name': entry.name, 'content': [(DiffEntry.CREATED,1,1,'(Binary file, created)')]}
+                else:
+                    yield {'name': entry.name, 'content': _all_inserted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
+            elif entry.kind == DiffEntry.DELETED:
+                entry_content = self.repo[entry.sha].read_raw()
+                if '\0' in entry_content:
+                    #Binary file
+                    yield {'name': entry.name, 'content': [(DiffEntry.DELETED,1,1,'(Binary file, deleted)')]}
+                else:
+                    yield {'name': entry.name, 'content': _all_deleted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
+            elif entry.kind == DiffEntry.MODIFIED:
+                #Use the already calculated diff in content?
+                if hasattr(entry, 'content'):
+                    yield {'name': entry.name, 'content': _filter_context(entry.content, 3)}
+                else:
+                    new_content = self.repo[entry.sha].read_raw()
+                    old_content = self.repo[entry.old_sha].read_raw()
+                    if '\0' in new_content or '\0' in old_content:
+                        #Binary file
+                        yield {'name': entry.name, 'content': [(DiffEntry.MODIFIED,1,1,'(Binary file, modified)')]}
+                    else:
+                        new_unicode = UnicodeDammit(new_content, smartQuotesTo=None).unicode.splitlines(True)
+                        old_unicode = UnicodeDammit(old_content, smartQuotesTo=None).unicode.splitlines(True)
+                        yield {'name': entry.name, 'content': _filter_context(_htmlize_diff(self.differ.compare(old_unicode,new_unicode)), 3)}
+        return
     
     def diff(self, old, new):
         try:
@@ -281,12 +294,15 @@ class TreeDiffer(object):
         if '\0' in old_data:
             result.content = None
             return result
-        old_data = UnicodeDammit(old_data, smartQuotesTo=None).unicode
-        new_data = UnicodeDammit(new_obj.read_raw(), smartQuotesTo=None).unicode
-        compared = self.differ.compare(old_data.splitlines(True), new_data.splitlines(True))
-        result.content = list(_htmlize_diff(compared))
+        result.content = list(self.compare_data(old_data, new_obj.read_raw()))
         return result
-
+    
+    def compare_data(self, old_data, new_data):
+        old_data = UnicodeDammit(old_data, smartQuotesTo=None).unicode
+        new_data = UnicodeDammit(new_data, smartQuotesTo=None).unicode
+        compared = self.differ.compare(old_data.splitlines(True), new_data.splitlines(True))
+        return _htmlize_diff(compared)
+        
 def test():
     repo = pygit2.Repository(settings.repo_path)
     head = repo[repo.lookup_reference('HEAD').resolve().sha]

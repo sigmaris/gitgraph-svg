@@ -1,0 +1,13 @@
+<svg id="ajax_graph_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{labels|length * 20}}px">
+  {% include "graph.svg" %}
+</svg>
+<script type="text/javascript">
+//<![CDATA[
+  gitgraph.existing_branches = {{existing_branches|tojson|safe}};
+  gitgraph.loaded_count += {{labels|length}};
+  //Append to existing graph
+  $('#graph_svg_group').append($('#ajax_graph_svg').children());
+  $('#graph_svg').attr('height',(gitgraph.loaded_count * 20) + 'px');
+  $('#ajax_graph_svg').remove();
+//]]>
+</script>

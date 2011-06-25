@@ -17,6 +17,12 @@ function unhighlight(event, ids) {
 }
 
 function load_commit(sha) {
-  var jQ = (window.parent ? window.parent.jQuery : window.jQuery); 
-  jQ('#bottom_pane').load('/sha/' + sha);
+  var jQ = (window.parent ? window.parent.jQuery : window.jQuery);
+  if(gitgraph.loaderTimeout) {
+    if(console) {
+      console.log("Busy loading another commit...");
+    }
+  } else {
+    jQ('#bottom_pane').load('/sha/' + sha);
+  }
 }

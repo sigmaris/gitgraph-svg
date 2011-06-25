@@ -88,7 +88,9 @@ def draw_commits(walker, existing_branches=[], currentY=0):
     display_list = {'edges':[], 'nodes':[], 'labels':[]}
     branches = []
     for existing_branch in existing_branches:
-        graph.append(new_edge(column, currentY, existing_branch))
+        if existing_branch:
+            graph.append(new_edge(column, currentY, existing_branch))
+        column = column + 1
         branches.append(existing_branch)
     for commit in walker:
         pos = place_commit(commit, branches, currentY, graph, display_list)
@@ -104,12 +106,14 @@ def draw_commits(walker, existing_branches=[], currentY=0):
         
         display_list['nodes'].append(new_node(pos, currentY, commit.sha, [x.sha for x in commit.parents]))
         
+        #TODO: make this more elegant?
         textX = len(branches)
         for branch in reversed(branches):
             if branch == '':
                 textX -= 1
             else:
                 break
+        textX = max(textX,1)
         
         if delete:
             #clear out this branch for future use
@@ -121,7 +125,7 @@ def draw_commits(walker, existing_branches=[], currentY=0):
         incomplete['d'].append({'type': 'V', 'y': currentY})
         display_list['edges'].append(incomplete)
     display_list['edges'].sort(key=itemgetter('order'))
-    return display_list
+    return (display_list, branches)
 
 class SHAConverter(BaseConverter):
     def __init__(self, url_map, *items):
@@ -131,14 +135,24 @@ class SHAConverter(BaseConverter):
 app.url_map.converters['sha'] = SHAConverter
 
 @app.route('/')
-def display_graph():
+def display_page():
     headref = repo.lookup_reference('HEAD')
     if headref.type == pygit2.GIT_REF_SYMBOLIC:
         headref = headref.resolve()
     walker = islice(repo.walk(headref.sha, pygit2.GIT_SORT_TIME), 100)
-    display_list = draw_commits(walker)
+    (display_list, existing_branches) = draw_commits(walker)
     import tree_diff
-    return render_template('base.html', initial_tree=tree_diff.test(), **display_list)
+    return render_template('base.html', initial_tree=tree_diff.test(), existing_branches=existing_branches, **display_list)
+
+@app.route('/graph/<int:offset>')
+def display_graph(offset):
+    headref = repo.lookup_reference('HEAD')
+    if headref.type == pygit2.GIT_REF_SYMBOLIC:
+        headref = headref.resolve()
+    walker = islice(repo.walk(headref.sha, pygit2.GIT_SORT_TIME), offset, offset+100)
+    branches = request.args.getlist('branches')
+    (display_list, existing_branches) = draw_commits(walker, branches, offset)
+    return render_template('graphonly.html', existing_branches=existing_branches, **display_list)
 
 def get_blob(obj):
     desired_mimetype = request.accept_mimetypes.best_match(['text/plain','text/html'],'text/html')
@@ -157,16 +171,30 @@ def get_blob(obj):
         resp.mimetype = 'text/plain'
     return resp
 
+def get_blob_diff(repo, old_obj, obj):
+    desired_mimetype = request.accept_mimetypes.best_match(['text/plain','text/html'],'text/html')
+    if desired_mimetype == 'text/html':
+        if '\0' in obj.data or '\0' in old_obj.data:
+            resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
+        else:
+            td = tree_diff.TreeDiffer(repo)
+            resp = app.make_response(render_template('changed_file.html', file={'name': 'name goes here', 'content': td.compare_data(old_obj.data, obj.data)}))
+    else:
+        resp = app.make_response("Plain text diff not supported yet")
+        resp.mimetype = 'text/plain'
+    return resp
+
+
 def get_commit(repo, obj):
     #TODO: handle merges with > 1 parent
     oneback = obj.parents[0]
-    td = tree_diff.TreeDiffer(True)
+    td = tree_diff.TreeDiffer(repo)
     tree = list(td.tree_diff(oneback.tree, obj.tree))
     
     changed_files = []
     for entry in tree:
         if entry.kind != tree_diff.DiffEntry.UNMODIFIED:
-            changed_files.extend(tree_diff.commitdiff(repo, entry))
+            changed_files.extend(td.commitdiff(entry))
     
     jsontree = json.dumps(tree, cls=tree_diff.DiffEntryEncoder)
     desired_mimetype = request.accept_mimetypes.best_match(['application/json','text/html'],'text/html')
@@ -177,14 +205,22 @@ def get_commit(repo, obj):
     else:
         #handle HTML view of commits with diffs on each file
         return render_template('commit.html', initial_tree=jsontree, changed_files=changed_files)
-    
+
 
 @app.route('/sha/<sha:sha>')
 def get_sha(sha):
     try:
         obj = repo[sha]
         if obj.type == pygit2.GIT_OBJ_BLOB:
-            return get_blob(obj)
+            try:
+                compare_to = request.args['compare_to']
+            except KeyError:
+                return get_blob(obj)
+            old_obj = repo[compare_to]
+            if old_obj.type == pygit2.GIT_OBJ_BLOB:
+                return get_blob_diff(repo, old_obj, obj)
+            else:
+                abort(400) #can't compare a blob against something else.
         elif obj.type == pygit2.GIT_OBJ_COMMIT:
             return get_commit(repo, obj)
         abort(400)
