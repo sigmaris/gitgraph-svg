@@ -6,6 +6,7 @@ from werkzeug.contrib.profiler import ProfilerMiddleware
 import pygit2
 from itertools import islice
 from operator import itemgetter
+import re
 import types
 import tree_diff
 import settings
@@ -141,8 +142,8 @@ def display_page():
         headref = headref.resolve()
     walker = islice(repo.walk(headref.sha, pygit2.GIT_SORT_TIME), 100)
     (display_list, existing_branches) = draw_commits(walker)
-    import tree_diff
-    return render_template('base.html', initial_tree=tree_diff.test(), existing_branches=existing_branches, **display_list)
+    (tags, branches, remotes) = get_all_refs(repo)    
+    return render_template('base.html', tags=tags, branches=branches, remotes=remotes, initial_tree=tree_diff.test(), existing_branches=existing_branches, **display_list)
 
 @app.route('/graph/<int:offset>')
 def display_graph(offset):
@@ -162,7 +163,7 @@ def get_blob(obj):
             resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
         else:
             # We need to pass unicode to Jinja2, so convert using UnicodeDammit:
-            resp = app.make_response(render_template('simple_file.html', content=UnicodeDammit(obj.data, smartQuotesTo=None).unicode.splitlines()))
+            resp = app.make_response(render_template('simple_file.html', sha=obj.sha, content=UnicodeDammit(obj.data, smartQuotesTo=None).unicode.splitlines()))
     else:
         if '\0' in obj.data:
             resp = app.make_response('(Binary file)')
@@ -178,7 +179,7 @@ def get_blob_diff(repo, old_obj, obj):
             resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
         else:
             td = tree_diff.TreeDiffer(repo)
-            resp = app.make_response(render_template('changed_file.html', file={'name': 'name goes here', 'content': td.compare_data(old_obj.data, obj.data)}))
+            resp = app.make_response(render_template('changed_file.html', sha=obj.sha, file={'name': '', 'content': td.compare_data(old_obj.data, obj.data)}))
     else:
         resp = app.make_response("Plain text diff not supported yet")
         resp.mimetype = 'text/plain'
@@ -206,6 +207,26 @@ def get_commit(repo, obj):
         #handle HTML view of commits with diffs on each file
         return render_template('commit.html', initial_tree=jsontree, changed_files=changed_files)
 
+REMOTE_REGEX = re.compile(r'^refs/remotes/(?P<remote>[^/]+)/(?P<branch>.+)')
+def get_all_refs(repo):
+    allrefs = repo.listall_references()
+    tags = []
+    branches = []
+    remotes = {}
+    for ref in allrefs:
+        if ref[:10] == 'refs/tags/':
+            tags.append(ref[10:])
+        elif ref[:11] == 'refs/heads/':
+            branches.append(ref[11:])
+        else:
+            m = REMOTE_REGEX.match(ref)
+            if m:
+                remote_name = m.group('remote')
+                if remote_name in remotes:
+                    remotes[remote_name].append(m.group('branch'))
+                else:
+                    remotes[remote_name] = [m.group('branch')]
+    return (tags, branches, remotes)
 
 @app.route('/sha/<sha:sha>')
 def get_sha(sha):

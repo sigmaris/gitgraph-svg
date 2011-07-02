@@ -23,7 +23,27 @@
   <title>Git-graph</title>
 </head>
 <body>
-  <div id="toolbar"></div>
+  <div id="toolbar">
+    <select id="ref_select" name="ref_select">
+      <optgroup label="Tags">
+      {% for tag in tags %}
+        <option value="tags/{{tag}}">{{tag}}</option>
+      {% endfor %}
+      </optgroup>
+      <optgroup label="Branches">
+      {% for branch in branches %}
+        <option value="heads/{{branch}}">{{branch}}</option>
+      {% endfor %}
+      </optgroup>
+      {% for remote in remotes.keys() %}
+      <optgroup label="Remote: {{remote}}">
+        {% for rbranch in remotes[remote] %}
+        <option value="remotes/{{remote}}/{{rbranch}}">{{rbranch}}</option>
+        {% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+  </div>
   <div id="wrapper">
     <div class="loader"></div>
     <div id="left_tree"></div>

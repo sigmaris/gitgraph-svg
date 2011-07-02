@@ -1,5 +1,5 @@
 <table class="filetable changed">
-  <thead><tr><th colspan="3">{{file.name}}</th></tr></thead>
+  <thead><tr><th colspan="3" class="filename" id="filename_{{sha}}">{{file.name}}</th></tr></thead>
   <tbody>
     {% for line in file.content -%}
     <tr class="{{line[0]}}">

@@ -56,7 +56,7 @@ $(document).ready(function() {
   $('#left_tree').jstree({
     "themes" : { "theme": "default", "url" : "/static/themes/default/style.css" },
     "json_data" : {
-      "data" : getTreeJSON //gitgraph.initial_tree
+      "data" : getTreeJSON
     },
     "ui": {
       "select_limit": 1
@@ -80,7 +80,12 @@ $(document).ready(function() {
           } else {
             data = {};
           }
-          $('#bottom_pane').load('/sha/' + a_element.attr('href').substring(1), $.param(data));
+          var sha_to_load = a_element.attr('href').substring(1);
+          $('#bottom_pane').load('/sha/' + sha_to_load, $.param(data), function(responseText, textStatus, jqXHR) {
+            if(textStatus == 'success' || textstatus == 'notmodified') {
+              $('#filename_' + sha_to_load).text(li_element.data('full_name'));
+            }
+          });
         }
       }
     }

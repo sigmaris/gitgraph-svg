@@ -1,9 +1,12 @@
 import pygit2
 import difflib
+import os
 from cgi import escape
 from flask import json, render_template
 from BeautifulSoup import UnicodeDammit
 import settings
+
+DIR_SEP = os.sep
 
 class DiffEntry(object):
     UNMODIFIED = 'unmodified'
@@ -12,20 +15,24 @@ class DiffEntry(object):
     MODIFIED = 'modified'
     
     @classmethod
-    def unmodified(cls, git_entry):
-        return DiffEntry(cls.UNMODIFIED, git_entry)
+    def unmodified(cls, git_entry, parent_name=None):
+        return DiffEntry(cls.UNMODIFIED, git_entry, parent_name)
     
     @classmethod
-    def created(cls, git_entry):
-        return DiffEntry(cls.CREATED, git_entry)
+    def created(cls, git_entry, parent_name=None):
+        return DiffEntry(cls.CREATED, git_entry, parent_name)
     
     @classmethod
-    def deleted(cls, git_entry):
-        return DiffEntry(cls.DELETED, git_entry)
+    def deleted(cls, git_entry, parent_name=None):
+        return DiffEntry(cls.DELETED, git_entry, parent_name)
     
-    def __init__(self, kind, git_entry):
+    def __init__(self, kind, git_entry, parent_name=None):
         self.children = []
-        self.name = git_entry.name
+        if parent_name:
+            self.name = DIR_SEP.join([parent_name,git_entry.name])
+        else:
+            self.name = git_entry.name
+        self.basename = git_entry.name
         self.sha = git_entry.sha
         self.kind = kind
         self.reference = False
@@ -33,16 +40,22 @@ class DiffEntry(object):
             git_obj = git_entry.to_object()
             if git_obj.type == pygit2.GIT_OBJ_TREE:
                 for i in range(0, len(git_obj)):
-                    self.children.append(DiffEntry(kind,git_obj[i]))
+                    self.children.append(DiffEntry(kind, git_obj[i], parent_name=self.name))
         except KeyError:
             #Probably a reference to other project
             self.reference = True
 
 class Modified(DiffEntry):
-    def __init__(self, old_entry, new_entry, children=[]):
+    def __init__(self, old_entry, new_entry, children=[], parent_name=None):
         self.children = children
-        self.name = new_entry.name
-        self.old_name = old_entry.name
+        if parent_name:
+            self.name = DIR_SEP.join([parent_name,new_entry.name])
+            self.old_name = DIR_SEP.join([parent_name,old_entry.name])
+        else:
+            self.name = new_entry.name
+            self.old_name = old_entry.name
+        self.basename = new_entry.name
+        self.old_basename = old_entry.name
         self.sha = new_entry.sha
         self.old_sha = old_entry.sha
         self.kind = DiffEntry.MODIFIED
@@ -160,13 +173,15 @@ class DiffEntryEncoder(json.JSONEncoder):
             
             json_dict = {
                 'data': {
-                    'title': o.name,
+                    'title': o.basename,
                     'attr': {
                         'id': 'tree_{0}'.format(o.sha),
                         'href': '#{0}'.format(o.sha)
                     }
                 },
-                'metadata': {}
+                'metadata': {
+                    'full_name': o.name
+                }
             }
             
             if hasattr(o, 'content') and o.content:
@@ -213,33 +228,33 @@ class TreeDiffer(object):
                 entry_content = self.repo[entry.sha].read_raw()
                 if '\0' in entry_content:
                     #Binary file
-                    yield {'name': entry.name, 'content': [(DiffEntry.CREATED,1,1,'(Binary file, created)')]}
+                    yield {'name': entry.name, 'sha': entry.sha, 'content': [(DiffEntry.CREATED,0,0,'(Binary file, created)')]}
                 else:
-                    yield {'name': entry.name, 'content': _all_inserted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
+                    yield {'name': entry.name, 'sha': entry.sha, 'content': _all_inserted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
             elif entry.kind == DiffEntry.DELETED:
                 entry_content = self.repo[entry.sha].read_raw()
                 if '\0' in entry_content:
                     #Binary file
-                    yield {'name': entry.name, 'content': [(DiffEntry.DELETED,1,1,'(Binary file, deleted)')]}
+                    yield {'name': entry.name, 'sha': entry.sha, 'content': [(DiffEntry.DELETED,0,0,'(Binary file, deleted)')]}
                 else:
-                    yield {'name': entry.name, 'content': _all_deleted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
+                    yield {'name': entry.name, 'sha': entry.sha, 'content': _all_deleted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
             elif entry.kind == DiffEntry.MODIFIED:
                 #Use the already calculated diff in content?
                 if hasattr(entry, 'content'):
-                    yield {'name': entry.name, 'content': _filter_context(entry.content, 3)}
+                    yield {'name': entry.name, 'sha': entry.sha, 'content': _filter_context(entry.content, 3)}
                 else:
                     new_content = self.repo[entry.sha].read_raw()
                     old_content = self.repo[entry.old_sha].read_raw()
                     if '\0' in new_content or '\0' in old_content:
                         #Binary file
-                        yield {'name': entry.name, 'content': [(DiffEntry.MODIFIED,1,1,'(Binary file, modified)')]}
+                        yield {'name': entry.name, 'sha': entry.sha, 'content': [(DiffEntry.MODIFIED,0,0,'(Binary file, modified)')]}
                     else:
                         new_unicode = UnicodeDammit(new_content, smartQuotesTo=None).unicode.splitlines(True)
                         old_unicode = UnicodeDammit(old_content, smartQuotesTo=None).unicode.splitlines(True)
-                        yield {'name': entry.name, 'content': _filter_context(_htmlize_diff(self.differ.compare(old_unicode,new_unicode)), 3)}
+                        yield {'name': entry.name, 'sha': entry.sha, 'content': _filter_context(_htmlize_diff(self.differ.compare(old_unicode,new_unicode)), 3)}
         return
     
-    def diff(self, old, new):
+    def diff(self, old, new, parent_name=None):
         try:
             old_obj = old.to_object()
             old_is_bad = False
@@ -252,21 +267,27 @@ class TreeDiffer(object):
             new_is_bad = True
         
         if old_is_bad and new_is_bad:
-            return Modified(old, new, [DiffEntry.unmodified(new)])
+            return Modified(old, new, [DiffEntry.unmodified(new, parent_name)])
         elif old_is_bad or new_is_bad:
-            return Modified(old, new, [DiffEntry.deleted(old), DiffEntry.created(new)])
+            return Modified(old, new, [DiffEntry.deleted(old, parent_name), DiffEntry.created(new, parent_name)])
         
         if old_obj.type != new_obj.type:
-            return Modified(old, new, [DiffEntry.deleted(old), DiffEntry.created(new)])
+            return Modified(old, new, [DiffEntry.deleted(old, parent_name), DiffEntry.created(new, parent_name)])
+        
+        if parent_name:
+            joined_name = DIR_SEP.join([parent_name, new.name])
+        else:
+            joined_name = new.name
+        
         if old_obj.type == pygit2.GIT_OBJ_TREE:
-            return Modified(old, new, self.tree_diff(old_obj,new_obj))
+            return Modified(old, new, self.tree_diff(old_obj,new_obj, joined_name), parent_name)
         else:
             if self.content:
                 return self.blob_diff(old,new)
             else:
-                return Modified(old, new)
+                return Modified(old, new, [], parent_name)
 
-    def tree_diff(self, old, new):
+    def tree_diff(self, old, new, parent_name=None):
         entries = []
         for i in range(0, len(new)):
             #does entry exist in old tree?
@@ -274,16 +295,16 @@ class TreeDiffer(object):
                 old_entry = old[new[i].name]
                 if old_entry.sha != new[i].sha:
                     #they have changed.
-                    entries.append(self.diff(old_entry, new[i]))
+                    entries.append(self.diff(old_entry, new[i], parent_name))
                 else:
-                    entries.append(DiffEntry.unmodified(new[i]))
+                    entries.append(DiffEntry.unmodified(new[i], parent_name))
             else:
                 #new subtree is new
-                entries.append(DiffEntry.created(new[i]))
+                entries.append(DiffEntry.created(new[i], parent_name))
         #now find old entries that are not in new tree
         for i in range(0, len(old)):
             if old[i].name not in new:
-                entries.append(DiffEntry.deleted(old[i]))
+                entries.append(DiffEntry.deleted(old[i],parent_name))
         return entries
             
     def blob_diff(self, old, new):
