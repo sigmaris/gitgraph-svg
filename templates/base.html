@@ -27,18 +27,18 @@
   <div id="toolbar">
     <select id="ref_select" name="ref_select">
       <optgroup label="Branches">
-      {% for branch in branches %}
+      {% for branch in branches|sort %}
         <option value="refs/heads/{{branch}}">{{branch}}</option>
       {% endfor %}
       </optgroup>
       <optgroup label="Tags">
-      {% for tag in tags %}
+      {% for tag in tags|sort %}
         <option value="refs/tags/{{tag}}">{{tag}}</option>
       {% endfor %}
       </optgroup>
-      {% for remote in remotes.keys() %}
+      {% for remote in remotes.keys()|sort %}
       <optgroup label="Remote: {{remote}}">
-        {% for rbranch in remotes[remote] %}
+        {% for rbranch in remotes[remote]|sort %}
         <option value="refs/remotes/{{remote}}/{{rbranch}}">{{rbranch}}</option>
         {% endfor %}
       </optgroup>

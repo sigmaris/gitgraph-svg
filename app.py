@@ -143,6 +143,7 @@ class RefConverter(BaseConverter):
 app.url_map.converters['ref'] = RefConverter
 
 @app.route('/')
+@app.route('/HEAD')
 def display_page():
     return display_graph('HEAD')
 
@@ -204,7 +205,7 @@ def get_blob_diff(repo, old_obj, obj):
 
 
 def get_commit(repo, obj):
-    #TODO: handle merges with > 1 parent
+    #TODO: handle commits with > 1 parent (merges!)
     oneback = obj.parents[0]
     td = tree_diff.TreeDiffer(repo)
     tree = list(td.tree_diff(oneback.tree, obj.tree))
