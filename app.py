@@ -132,28 +132,45 @@ class SHAConverter(BaseConverter):
     def __init__(self, url_map, *items):
         super(SHAConverter, self).__init__(url_map)
         self.regex = '[a-fA-F0-9]{40}'
-    
+
 app.url_map.converters['sha'] = SHAConverter
+
+class RefConverter(BaseConverter):
+    def __init__(self, url_map, *items):
+        super(RefConverter, self).__init__(url_map)
+        self.regex = r'refs/(?:heads|remotes|tags)/.+'
+
+app.url_map.converters['ref'] = RefConverter
 
 @app.route('/')
 def display_page():
-    headref = repo.lookup_reference('HEAD')
-    if headref.type == pygit2.GIT_REF_SYMBOLIC:
-        headref = headref.resolve()
-    walker = islice(repo.walk(headref.sha, pygit2.GIT_SORT_TIME), 100)
-    (display_list, existing_branches) = draw_commits(walker)
-    (tags, branches, remotes) = get_all_refs(repo)    
-    return render_template('base.html', tags=tags, branches=branches, remotes=remotes, initial_tree=tree_diff.test(), existing_branches=existing_branches, **display_list)
+    return display_graph('HEAD')
 
-@app.route('/graph/<int:offset>')
-def display_graph(offset):
-    headref = repo.lookup_reference('HEAD')
+@app.route('/<ref:ref>')
+def display_graph(ref):
+    offset = request.args.get('offset',0,type=int)
+    headref = repo.lookup_reference(ref)
+    
+    #Resolve symbolic refs
     if headref.type == pygit2.GIT_REF_SYMBOLIC:
         headref = headref.resolve()
-    walker = islice(repo.walk(headref.sha, pygit2.GIT_SORT_TIME), offset, offset+100)
+    head_obj = repo[headref.sha]
+    
+    #Fully resolve tags..
+    while head_obj.type == pygit2.GIT_OBJ_TAG:
+        head_obj = head_obj.target
+    
+    walker = islice(repo.walk(head_obj.sha, pygit2.GIT_SORT_TIME), offset, offset+100)
     branches = request.args.getlist('branches')
     (display_list, existing_branches) = draw_commits(walker, branches, offset)
-    return render_template('graphonly.html', existing_branches=existing_branches, **display_list)
+    if request.is_xhr:
+        if offset == 0:
+            return render_template('graphonly.html', replace=True, initial_tree=tree_diff.get_tree_diff(head_obj.sha), existing_branches=existing_branches, current_ref=ref, **display_list)
+        else:
+            return render_template('graphonly.html', replace=False, existing_branches=existing_branches, current_ref=ref, **display_list)
+    else:
+        (tags, branches, remotes) = get_all_refs(repo)    
+        return render_template('base.html', tags=tags, branches=branches, remotes=remotes, current_ref=ref, initial_tree=tree_diff.get_tree_diff(head_obj.sha), existing_branches=existing_branches, **display_list)
 
 def get_blob(obj):
     desired_mimetype = request.accept_mimetypes.best_match(['text/plain','text/html'],'text/html')

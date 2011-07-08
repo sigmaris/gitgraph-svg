@@ -94,6 +94,10 @@ $(document).ready(function() {
   setupDraggables();
   
   $('#reveal').click(function(event) {
-    $('#reveal_ajax').load('/graph/'+gitgraph.loaded_count, $.param({branches: gitgraph.existing_branches}, true));
+    $('#reveal_ajax').load('/'+gitgraph.current_ref, $.param({offset: gitgraph.loaded_count, branches: gitgraph.existing_branches}, true));
+  });
+
+  $('#ref_select').change(function() {
+    $('#reveal_ajax').load('/'+$('#ref_select').val());
   })
 });

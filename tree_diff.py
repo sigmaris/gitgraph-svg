@@ -324,9 +324,9 @@ class TreeDiffer(object):
         compared = self.differ.compare(old_data.splitlines(True), new_data.splitlines(True))
         return _htmlize_diff(compared)
         
-def test():
+def get_tree_diff(commit_sha):
     repo = pygit2.Repository(settings.repo_path)
-    head = repo[repo.lookup_reference('HEAD').resolve().sha]
+    head = repo[commit_sha]
     oneback = head.parents[0]
-    td = TreeDiffer(True)
+    td = TreeDiffer(repo)
     return json.dumps(td.tree_diff(oneback.tree, head.tree), cls=DiffEntryEncoder)

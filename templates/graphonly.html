@@ -4,9 +4,19 @@
 <script type="text/javascript">
 //<![CDATA[
   gitgraph.existing_branches = {{existing_branches|tojson|safe}};
+  gitgraph.current_ref = {{current_ref|tojson|safe}};
+  {% if replace %}
+  gitgraph.initial_tree = {{initial_tree|safe}};
+  gitgraph.loaded_count = {{labels|length}};
+  //Empty svg <g> element and replace content
+  $('#graph_svg_group').empty().append($('#ajax_graph_svg').children());
+  //Refresh left tree
+  $('#left_tree').jstree('refresh');
+  {% else %}
   gitgraph.loaded_count += {{labels|length}};
   //Append to existing graph
   $('#graph_svg_group').append($('#ajax_graph_svg').children());
+  {% endif %}
   $('#graph_svg').attr('height',(gitgraph.loaded_count * 20) + 'px');
   $('#ajax_graph_svg').remove();
 //]]>
