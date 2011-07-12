@@ -4,7 +4,11 @@
  * Supported plugins: ui (hovered, clicked), checkbox, contextmenu, search
  */
 
-.jstree-apple { background:rgb(219, 223, 230) left top repeat; }
+.jstree-apple { 
+  background-image: -moz-linear-gradient(rgb(228, 233, 239), rgb(199, 206, 217));
+  background-image: -webkit-linear-gradient(rgb(228, 233, 239), rgb(199, 206, 217));
+  background-image: -o-linear-gradient(rgb(228, 233, 239), rgb(199, 206, 217));
+}
 .jstree-apple li, 
 .jstree-apple ins { background-image:url("d.png"); background-repeat:no-repeat; background-color:transparent; }
 .jstree-apple li { background-position:-90px 0; background-repeat:repeat-y;  }

@@ -23,10 +23,10 @@ function setupDraggables() {
     axis: 'y',
     containment: 'parent',
     stop: function(event, ui) {
-      var docHeight = $(document).height();
-      var topPercent = ui.offset.top / docHeight;
+      var docHeight = $('#wrapper').height();
+      var topPercent = (ui.offset.top - $('#toolbar').height()) / docHeight;
       var bottomPercent = 1 - topPercent;
-      bottomPercent -= 0.003; //allow for divider width
+      bottomPercent -= 0.004; //allow for divider width
       $('#top_graph').css('height',100*topPercent+'%');
       $('#bottom_pane').css('height',100*bottomPercent+'%');
       $('#mid_divider').css('top','');

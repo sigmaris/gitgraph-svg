@@ -8,6 +8,7 @@ from itertools import islice
 from operator import itemgetter
 import time
 import re
+import mimetypes
 import types
 import tree_diff
 import settings
@@ -192,11 +193,16 @@ def get_blob(obj):
             # We need to pass unicode to Jinja2, so convert using UnicodeDammit:
             resp = app.make_response(render_template('simple_file.html', sha=obj.sha, content=force_unicode(obj.data).splitlines()))
     else:
-        if '\0' in obj.data:
-            resp = app.make_response('(Binary file)')
-        else:
-            resp = app.make_response(obj.data)
-        resp.mimetype = 'text/plain'
+        resp = app.make_response(obj.data)
+        try:
+            filename_hint = request.args['filename']
+            guessed_type = mimetypes.guess_type(filename_hint)[0]
+            if guessed_type:
+                resp.mimetype = guessed_type
+            else:
+                resp.mimetype = 'text/plain'
+        except KeyError:
+            resp.mimetype = 'text/plain'
     return resp
 
 def get_blob_diff(repo, old_obj, obj):

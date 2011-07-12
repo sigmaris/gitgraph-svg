@@ -21,11 +21,11 @@ dl dd {
   position:fixed;
   top: 0px;
   left: 0px;
-  background-image: -moz-linear-gradient(#D0D0D0, #A8A8A8);
+  background-image: -moz-linear-gradient(#e2e2e2, #a0a0a0);
   /* Safari 5.1+, Chrome 10+ */
-  background-image: -webkit-linear-gradient(#D0D0D0, #A8A8A8); 
+  background-image: -webkit-linear-gradient(#e2e2e2, #a0a0a0); 
   /* Opera 11.10+ */
-  background-image: -o-linear-gradient(#D0D0D0, #A8A8A8);
+  background-image: -o-linear-gradient(#e2e2e2, #a0a0a0);
 }
 
 #toolbar select {
@@ -89,7 +89,7 @@ dl dd {
 
 #mid_divider {
   width: 100%;
-  height: 0.3%;
+  height: 0.4%;
   max-height: 5px;
   background-color: gray;
   cursor:row-resize;
@@ -97,7 +97,7 @@ dl dd {
 
 #bottom_pane {
   width: 100%;
-  height: 49.7%;
+  height: 49.6%;
   overflow: auto;
 }
 
@@ -105,7 +105,10 @@ dl dd {
   width: 1.3em;
   margin-left: auto;
   margin-right: auto;
-  border: 1px solid black;
+  margin-bottom: 0.3em;
+  border: 1px dashed #ccc;
+  background-color: #eee;
+  color: #555;
   padding: 5px 10px;
   cursor: pointer;
 }
@@ -121,7 +124,7 @@ dl dd {
 #top_graph thead th {
   padding: 1px 0px;
   margin: 0px;
-  border-left: 1px solid #CCC;
+  border-left: 1px solid #ccc;
   line-height: 15px;
 }
 
@@ -145,7 +148,7 @@ dl dd {
 
 .commit h1 {
   padding: .5em;
-  background-color: #DDDCD6;
+  background-color: #ccc;
   font-size: 1.5em;
 }
 
@@ -195,6 +198,10 @@ dl dd {
 
 .filetable tr:last-child td {
   border-bottom: none;
+}
+
+.filetable th.filename {
+  width: 100%;
 }
 
 .filetable td:last-child {

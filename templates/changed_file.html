@@ -1,5 +1,28 @@
 <table class="filetable changed">
-  <thead><tr><th colspan="3" class="filename" id="filename_{{file.sha}}">{{file.name}} <a class="back_to_top" href="#top_of_commit">(Back to top)</a></th></tr></thead>
+  {% if file.binary == "image" %}
+    {% if file.content == "modified" %}
+      {% set colspan = "2" %}
+    {% else %}
+      {% set colspan = "1" %}
+    {% endif %}
+  {% else %}
+    {% set colspan = "3" %}
+  {% endif %}
+  <thead><tr><th colspan="{{colspan}}" class="filename" id="filename_{{file.sha}}">{{file.name}} <a class="back_to_top" href="#top_of_commit">(Back to top)</a></th></tr></thead>
+  {% if file.binary == "image" %}
+  <tbody class="image">
+    <tr>
+      {% if file.content == "modified" %}
+      <td>
+        <img class="{{file.content}}" src="/sha/{{file.old_sha}}?filename={{file.name}}">
+      </td>
+      {% endif %}
+      <td>
+        <img class="{{file.content}}" src="/sha/{{file.sha}}?filename={{file.name}}">
+      </td>
+    </tr>
+  </tbody>
+  {% else %}
   <tbody>
     {% for line in file.content -%}
     <tr class="{{line[0]}}">
@@ -17,4 +40,5 @@
     </tr>
     {%- endfor %}
   </tbody>
+  {% endif %}
 </table>
