@@ -6,6 +6,7 @@ from werkzeug.contrib.profiler import ProfilerMiddleware
 import pygit2
 from itertools import islice
 from operator import itemgetter
+import time
 import re
 import types
 import tree_diff
@@ -15,7 +16,7 @@ app = Flask(__name__)
 repo = pygit2.Repository(settings.repo_path)
 
 def new_edge(column, y, parent, extra_classes=[], override_color=None):
-    if override_color:
+    if override_color != None:
         color = override_color
     else:
         color = column
@@ -86,7 +87,7 @@ def process_parents(parents, branches, x, y, graph=None, display_list=None):
 def draw_commits(walker, existing_branches=[], currentY=0):
     column = 0
     graph = []
-    display_list = {'edges':[], 'nodes':[], 'labels':[]}
+    display_list = {'edges':[], 'nodes':[], 'labels':[], 'authors':[], 'dates':[]}
     branches = []
     for existing_branch in existing_branches:
         if existing_branch:
@@ -119,14 +120,22 @@ def draw_commits(walker, existing_branches=[], currentY=0):
         if delete:
             #clear out this branch for future use
             branches[pos] = ''
-        label_text = UnicodeDammit(commit.message_short, smartQuotesTo=None).unicode
+        label_text = force_unicode(commit.message_short)
         display_list['labels'].append({'x': textX, 'y': currentY, 'content': label_text, 'sha': commit.sha})
+        display_list['authors'].append({'x': 0, 'y': currentY, 'content': force_unicode(commit.author[0]), 'sha': commit.sha})
+        display_list['dates'].append({'x': 0, 'y': currentY, 'content': format_commit_time(commit.commit_time), 'sha': commit.sha})
         currentY += 1
     for incomplete in graph:
         incomplete['d'].append({'type': 'V', 'y': currentY})
         display_list['edges'].append(incomplete)
     display_list['edges'].sort(key=itemgetter('order'))
     return (display_list, branches)
+
+def format_commit_time(timestamp):
+    return time.strftime('%d %B %Y %H:%M', time.localtime(timestamp))
+
+def force_unicode(text):
+    return UnicodeDammit(text, smartQuotesTo=None).unicode
 
 class SHAConverter(BaseConverter):
     def __init__(self, url_map, *items):
@@ -181,7 +190,7 @@ def get_blob(obj):
             resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
         else:
             # We need to pass unicode to Jinja2, so convert using UnicodeDammit:
-            resp = app.make_response(render_template('simple_file.html', sha=obj.sha, content=UnicodeDammit(obj.data, smartQuotesTo=None).unicode.splitlines()))
+            resp = app.make_response(render_template('simple_file.html', sha=obj.sha, content=force_unicode(obj.data).splitlines()))
     else:
         if '\0' in obj.data:
             resp = app.make_response('(Binary file)')
@@ -223,7 +232,13 @@ def get_commit(repo, obj):
         return resp
     else:
         #handle HTML view of commits with diffs on each file
-        return render_template('commit.html', initial_tree=jsontree, changed_files=changed_files)
+        message = force_unicode(obj.message)
+        title = force_unicode(obj.message_short)
+        author = (force_unicode(obj.author[0]), force_unicode(obj.author[1]))
+        committer = (force_unicode(obj.committer[0]), force_unicode(obj.committer[1]))
+        author_time = format_commit_time(obj.author[2])
+        commit_time = format_commit_time(obj.committer[2])
+        return render_template('commit.html', commit=obj, message=message, title=title, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=jsontree, changed_files=changed_files)
 
 REMOTE_REGEX = re.compile(r'^refs/remotes/(?P<remote>[^/]+)/(?P<branch>.+)')
 def get_all_refs(repo):

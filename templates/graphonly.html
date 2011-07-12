@@ -1,23 +1,41 @@
-<svg id="ajax_graph_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{labels|length * 20}}px">
+<svg id="ajax_graph_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{nodes|length * 20}}px">
   {% include "graph.svg" %}
+</svg>
+<svg id="ajax_authors_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{authors|length * 20}}px">
+  {% for label in authors %}
+  <text id="label_{{label.sha}}" class="label" onclick="load_commit('{{label.sha}}')" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
+  {% endfor %}
+</svg>
+<svg id="ajax_dates_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{dates|length * 20}}px">
+  {% for label in dates %}
+  <text id="label_{{label.sha}}" class="label" onclick="load_commit('{{label.sha}}')" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
+  {% endfor %}
 </svg>
 <script type="text/javascript">
 //<![CDATA[
   gitgraph.existing_branches = {{existing_branches|tojson|safe}};
   gitgraph.current_ref = {{current_ref|tojson|safe}};
   {% if replace %}
-  gitgraph.initial_tree = {{initial_tree|safe}};
-  gitgraph.loaded_count = {{labels|length}};
-  //Empty svg <g> element and replace content
-  $('#graph_svg_group').empty().append($('#ajax_graph_svg').children());
-  //Refresh left tree
-  $('#left_tree').jstree('refresh');
+    gitgraph.initial_tree = {{initial_tree|safe}};
+    gitgraph.loaded_count = {{nodes|length}};
+    //Empty svg <g> element and replace content
+    $('#graph_svg_group').empty().append($('#ajax_graph_svg').children());
+    $('#authors_svg_group').empty().append($('#ajax_authors_svg').children());
+    $('#dates_svg_group').empty().append($('#ajax_dates_svg').children());
+    //Refresh left tree
+    $('#left_tree').jstree('refresh');
   {% else %}
-  gitgraph.loaded_count += {{labels|length}};
-  //Append to existing graph
-  $('#graph_svg_group').append($('#ajax_graph_svg').children());
+    gitgraph.loaded_count += {{nodes|length}};
+    //Append to existing graph
+    $('#graph_svg_group').append($('#ajax_graph_svg').children());
+    $('#authors_svg_group').append($('#ajax_authors_svg').children());
+    $('#dates_svg_group').append($('#ajax_dates_svg').children());
   {% endif %}
   $('#graph_svg').attr('height',(gitgraph.loaded_count * 20) + 'px');
+  $('#authors_svg').attr('height',(gitgraph.loaded_count * 20) + 'px');
+  $('#dates_svg').attr('height',(gitgraph.loaded_count * 20) + 'px');
   $('#ajax_graph_svg').remove();
+  $('#ajax_authors_svg').remove();
+  $('#ajax_dates_svg').remove();
 //]]>
 </script>

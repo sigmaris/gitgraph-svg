@@ -16,7 +16,7 @@
   gitgraph = {};
   gitgraph.initial_tree = {{initial_tree|safe}};
   gitgraph.existing_branches = {{existing_branches|tojson|safe}};
-  gitgraph.loaded_count = {{labels|length}};
+  gitgraph.loaded_count = {{nodes|length}};
   gitgraph.current_ref = {{current_ref|tojson|safe}}
   //]]>
   </script>
@@ -51,11 +51,44 @@
     <div id="left_divider"></div>
     <div id="right_container">
       <div id="top_graph">
-        <svg id="graph_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{labels|length * 20}}px">
-          <g id="graph_svg_group" transform="translate(10,10)">
-            {% include "graph.svg" %}
-          </g>
-        </svg>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Commit</th>
+              <th scope="col" class="author">Author</th>
+              <th scope="col" class="date">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <svg id="graph_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{nodes|length * 20}}px">
+                  <g id="graph_svg_group" transform="translate(10,10)">
+                    {% include "graph.svg" %}
+                  </g>
+                </svg>
+              </td>
+              <td>
+                <svg id="authors_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{authors|length * 20}}px">
+                  <g id="authors_svg_group" transform="translate(10,10)">
+                    {% for label in authors %}
+                    <text id="label_{{label.sha}}" class="label" onclick="load_commit('{{label.sha}}')" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
+                    {% endfor %}
+                  </g>
+                </svg>
+              </td>
+              <td>
+                <svg id="dates_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{dates|length * 20}}px">
+                  <g id="dates_svg_group" transform="translate(10,10)">
+                    {% for label in dates %}
+                    <text id="label_{{label.sha}}" class="label" onclick="load_commit('{{label.sha}}')" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
+                    {% endfor %}
+                  </g>
+                </svg>
+              </td>
+            </tr>
+          </tbody>
+        </table>
         <div id="reveal">vv<div id="reveal_ajax"></div></div>
       </div>
       <div id="mid_divider"></div>

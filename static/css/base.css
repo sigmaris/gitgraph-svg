@@ -5,6 +5,16 @@ html, body {
   padding: 0;
 }
 
+dl dt {
+  float: left;
+  font-weight: bold;
+}
+
+dl dd {
+  margin-left: 6em;
+  margin-bottom: 0.5em;
+}
+
 #toolbar {
   width: 100%;
   height: 50px;
@@ -100,12 +110,60 @@ html, body {
   cursor: pointer;
 }
 
-/** Diffs **/
+/** Graph table **/
+#top_graph table {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#top_graph thead th {
+  padding: 1px 0px;
+  margin: 0px;
+  border-left: 1px solid #CCC;
+  line-height: 15px;
+}
+
+#top_graph th.author {
+  width: 12em;
+}
+
+#top_graph th.date {
+  width: 14em;
+}
+
+#top_graph thead tr {
+  background-image: url("/static/img/tablehead.png");
+  background-repeat: repeat-x;
+}
+
+/** Commits & Diffs **/
+.commit dl, .commit ul, .commit h1, .commit_msg, .filetable {
+  margin: 1%;
+}
+
+.commit h1 {
+  padding: .5em;
+  background-color: #DDDCD6;
+  font-size: 1.5em;
+}
+
+.commit_msg {
+  border: 1px dashed #ccc;
+  padding: 0.2em;
+}
+
+.commit ul {
+  list-style-type: none;
+  font-family: monospace;
+  padding: 0;
+}
+
 .filetable {
   border: 1px solid gray;
   display: inline-block;
   width: 98%;
-  margin: 1%;
   border-collapse: collapse;
   border-spacing: 0px;
   background-image: url("/static/img/sand.png");
@@ -144,6 +202,10 @@ html, body {
   border-left: 1px solid gray;
   border-bottom: none;
   text-align: left;
+}
+
+.back_to_top {
+  float: right;
 }
 
 .created, ins {

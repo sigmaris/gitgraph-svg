@@ -32,6 +32,12 @@ function setupDraggables() {
       $('#mid_divider').css('top','');
     }
   });
+  
+  $('#top_graph th').resizable({
+    handles: 'all',
+    maxHeight: 17,
+    minHeight: 17
+  });
 }
 
 $(document).ajaxStart(function() {
@@ -54,7 +60,7 @@ $(document).ready(function() {
   });
     
   $('#left_tree').jstree({
-    "themes" : { "theme": "default", "url" : "/static/themes/default/style.css" },
+    "themes" : { "theme": "apple", "url" : "/static/themes/apple/style.css", dots: false },
     "json_data" : {
       "data" : getTreeJSON
     },

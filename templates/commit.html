@@ -1,10 +1,32 @@
-<div>
+<div class="commit">
   <script type="text/javascript">
   //<![CDATA[
   gitgraph.initial_tree = {{initial_tree|safe}};
   $('#left_tree').jstree('refresh');
   //]]>
   </script>
+  <a name="top_of_commit" />
+  <h1>{{title}}</h1>
+  <dl class="commit_info">
+    <dt>Author</dt>
+    <dd>{{author[0]}} &lt;<a href="mailto:{{author[1]}}">{{author[1]}}</a>&gt;<br />{{author_time}}</dd>
+    <dt>Committer</dt>
+    <dd>{{committer[0]}} &lt;<a href="mailto:{{committer[1]}}">{{committer[1]}}</a>&gt;<br />{{commit_time}}</dd>
+    <dt>Commit</dt>
+    <dd>{{commit.sha}}</dd>
+    <dt>Tree</dt>
+    <dd>{{commit.tree.sha}}</dd>
+    {% for parent in commit.parents %}
+    <dt>Parent</dt>
+    <dd>{{parent.sha}}</dd>
+    {% endfor %}
+  </dl>
+  <pre class="commit_msg">{{message}}</pre>
+  <ul>
+    {% for file in changed_files %}
+    <li><a href="#filename_{{file.sha}}">{{file.name}}</a></li>
+    {% endfor %}
+  </ul>
   {% for file in changed_files %}
   {% include "changed_file.html" %}
   {% endfor %}
