@@ -1,145 +1,20 @@
 from flask import Flask, render_template, request, escape, Markup, json
-from BeautifulSoup import UnicodeDammit
 from werkzeug.routing import BaseConverter
 from werkzeug import run_simple
 from werkzeug.contrib.profiler import ProfilerMiddleware
 import pygit2
 from itertools import islice
-from operator import itemgetter
 import time
 import re
 import mimetypes
 import types
 import tree_diff
+import graph
 import settings
+import ggutils
 
 app = Flask(__name__)
 repo = pygit2.Repository(settings.repo_path)
-
-def new_edge(column, y, parent, extra_classes=[], override_color=None):
-    if override_color != None:
-        color = override_color
-    else:
-        color = column
-    return {'order': y, 'class': 'col_{0} {1}'.format(color % 8, ' '.join(extra_classes)), 'd': [{'type': 'M', 'x': column, 'y': y}], 'parent': parent}
-
-def new_node(column, y, sha, parents, extra_classes=[]):
-    result = {'x': column, 'y': y, 'id': sha, 'parents': parents}
-    if extra_classes:
-        result['class'] = ' '.join(extra_classes)
-    return result
-
-def place_commit(commit, branches, y, graph = None, display_list = None):
-    try:
-        #Find which branch this commit should go on
-        pos = branches.index(commit.sha)
-    except ValueError:
-        #this is the first commit - create a branch
-        pos = len(branches)
-        branches.append(commit.sha)
-        if graph and display_list:
-            if commit.parents:
-                graph.append(new_edge(pos, y, commit.parents[0].sha))
-            display_list['nodes'].append(new_node(pos, y, commit.sha, [x.sha for x in commit.parents]))
-    return pos
-
-def finish_edges(graph, display_list, sha, x, y):
-    for line in list(graph):
-        if line['parent'] == sha:
-            #draw the closing line into this commit
-            line['d'].append({'type': 'L', 'x': x, 'y': y})
-            display_list['edges'].append(line)
-            graph.remove(line)
-        else:
-            line['d'].append({'type': 'v', 'y': 1})
-
-def process_parents(parents, branches, x, y, graph=None, display_list=None):
-    """ This function creates edges in the graph for each of a node's parents.
-    It places the first parent in the same 'lane' as the current commit,
-    then inserts the remaining parents in whatever blank spaces are available"""
-    append = False
-    delete = True
-    for parent in parents:
-        if parent.sha not in branches:
-            delete = False
-            if not append:
-                #place first parent on this branch
-                branches[x] = parent.sha
-                if graph != None:
-                    graph.append(new_edge(x, y, parent.sha))
-                append = True
-            else:
-                #here we would draw a line to new branch
-                try:
-                    insertat = branches.index('')
-                    branches[insertat] = parent.sha
-                except ValueError:
-                    insertat = len(branches)
-                    branches.append(parent.sha)
-                if graph != None:
-                    edge = new_edge(x, y, parent.sha, override_color=insertat)
-                    edge['d'].append({'type': 'l', 'x': insertat-x, 'y': 0.5})
-                    graph.append(edge)
-        elif display_list != None:
-            #here we draw lines to other branches.
-            otherbranch = branches.index(parent.sha)
-            edge = new_edge(x, y, parent.sha, override_color=otherbranch)
-            edge['d'].append({'type': 'l', 'x': otherbranch-x, 'y': 0.5})
-            display_list['edges'].append(edge)
-    return delete
-
-def draw_commits(walker, existing_branches=[], currentY=0):
-    column = 0
-    graph = []
-    display_list = {'edges':[], 'nodes':[], 'labels':[], 'authors':[], 'dates':[]}
-    branches = []
-    for existing_branch in existing_branches:
-        if existing_branch:
-            graph.append(new_edge(column, currentY, existing_branch))
-        column = column + 1
-        branches.append(existing_branch)
-    for commit in walker:
-        pos = place_commit(commit, branches, currentY, graph, display_list)
-        
-        finish_edges(graph, display_list, commit.sha, pos, currentY)
-        
-        #The delete flag determines whether to mark this branch as deleted
-        if commit.parents:
-            delete = process_parents(commit.parents, branches, pos, currentY, graph, display_list)
-        else:
-            del branches[pos] #this branch has no parent, delete it
-            delete = False
-        
-        display_list['nodes'].append(new_node(pos, currentY, commit.sha, [x.sha for x in commit.parents]))
-        
-        #TODO: make this more elegant?
-        textX = len(branches)
-        for branch in reversed(branches):
-            if branch == '':
-                textX -= 1
-            else:
-                break
-        textX = max(textX,1)
-        
-        if delete:
-            #clear out this branch for future use
-            branches[pos] = ''
-        label_text = force_unicode(commit.message_short)
-        display_list['labels'].append({'x': textX, 'y': currentY, 'content': label_text, 'sha': commit.sha})
-        display_list['authors'].append({'x': 0, 'y': currentY, 'content': force_unicode(commit.author[0]), 'sha': commit.sha})
-        display_list['dates'].append({'x': 0, 'y': currentY, 'content': format_commit_time(commit.commit_time), 'sha': commit.sha})
-        currentY += 1
-    for incomplete in graph:
-        incomplete['d'].append({'type': 'V', 'y': currentY})
-        display_list['edges'].append(incomplete)
-    display_list['edges'].sort(key=itemgetter('order'))
-    return (display_list, branches)
-
-def format_commit_time(timestamp):
-    return time.strftime('%d %B %Y %H:%M', time.localtime(timestamp))
-
-def force_unicode(text):
-    return UnicodeDammit(text, smartQuotesTo=None).unicode
 
 class SHAConverter(BaseConverter):
     def __init__(self, url_map, *items):
@@ -164,6 +39,7 @@ def display_page():
 def display_graph(ref):
     offset = request.args.get('offset',0,type=int)
     headref = repo.lookup_reference(ref)
+    grapher = graph.Grapher()
     
     #Resolve symbolic refs
     if headref.type == pygit2.GIT_REF_SYMBOLIC:
@@ -176,7 +52,7 @@ def display_graph(ref):
     
     walker = islice(repo.walk(head_obj.sha, pygit2.GIT_SORT_TIME), offset, offset+100)
     branches = request.args.getlist('branches')
-    (display_list, existing_branches) = draw_commits(walker, branches, offset)
+    (display_list, existing_branches) = grapher.draw_commits(walker, branches, offset)
     if request.is_xhr:
         if offset == 0:
             return render_template('graphonly.html', replace=True, initial_tree=get_tree_diff_json(repo, head_obj), existing_branches=existing_branches, current_ref=ref, **display_list)
@@ -194,7 +70,7 @@ def get_blob(obj):
             resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
         else:
             # We need to pass unicode to Jinja2, so convert using UnicodeDammit:
-            resp = app.make_response(render_template('simple_file.html', sha=obj.sha, content=force_unicode(obj.data).splitlines()))
+            resp = app.make_response(render_template('simple_file.html', sha=obj.sha, content=ggutils.force_unicode(obj.data).splitlines()))
     else:
         resp = app.make_response(obj.data)
         try:
@@ -252,12 +128,12 @@ def get_commit(repo, obj):
         return resp
     else:
         #handle HTML view of commits with diffs on each file
-        message = force_unicode(obj.message)
-        title = force_unicode(obj.message_short)
-        author = (force_unicode(obj.author[0]), force_unicode(obj.author[1]))
-        committer = (force_unicode(obj.committer[0]), force_unicode(obj.committer[1]))
-        author_time = format_commit_time(obj.author[2])
-        commit_time = format_commit_time(obj.committer[2])
+        message = ggutils.force_unicode(obj.message)
+        title = ggutils.force_unicode(obj.message_short)
+        author = (ggutils.force_unicode(obj.author[0]), ggutils.force_unicode(obj.author[1]))
+        committer = (ggutils.force_unicode(obj.committer[0]), ggutils.force_unicode(obj.committer[1]))
+        author_time = ggutils.format_commit_time(obj.author[2])
+        commit_time = ggutils.format_commit_time(obj.committer[2])
         return render_template('commit.html', commit=obj, message=message, title=title, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=jsontree, changed_files=changed_files)
 
 REMOTE_REGEX = re.compile(r'^refs/remotes/(?P<remote>[^/]+)/(?P<branch>.+)')
