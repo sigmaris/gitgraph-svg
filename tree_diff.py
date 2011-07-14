@@ -315,7 +315,7 @@ class TreeDiffer(object):
             if old[i].name not in new:
                 entries.append(DiffEntry.deleted(old[i],parent_name))
         return entries
-            
+    
     def blob_diff(self, old, new):
         old_obj = old.to_object()
         new_obj = new.to_object()
@@ -332,10 +332,3 @@ class TreeDiffer(object):
         new_data = UnicodeDammit(new_data, smartQuotesTo=None).unicode
         compared = self.differ.compare(old_data.splitlines(True), new_data.splitlines(True))
         return _htmlize_diff(compared)
-        
-def get_tree_diff(commit_sha):
-    repo = pygit2.Repository(settings.repo_path)
-    head = repo[commit_sha]
-    oneback = head.parents[0]
-    td = TreeDiffer(repo)
-    return json.dumps(td.tree_diff(oneback.tree, head.tree), cls=DiffEntryEncoder)

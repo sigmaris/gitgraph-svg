@@ -54,6 +54,9 @@ def finish_edges(graph, display_list, sha, x, y):
             line['d'].append({'type': 'v', 'y': 1})
 
 def process_parents(parents, branches, x, y, graph=None, display_list=None):
+    """ This function creates edges in the graph for each of a node's parents.
+    It places the first parent in the same 'lane' as the current commit,
+    then inserts the remaining parents in whatever blank spaces are available"""
     append = False
     delete = True
     for parent in parents:
@@ -176,12 +179,12 @@ def display_graph(ref):
     (display_list, existing_branches) = draw_commits(walker, branches, offset)
     if request.is_xhr:
         if offset == 0:
-            return render_template('graphonly.html', replace=True, initial_tree=tree_diff.get_tree_diff(head_obj.sha), existing_branches=existing_branches, current_ref=ref, **display_list)
+            return render_template('graphonly.html', replace=True, initial_tree=get_tree_diff_json(repo, head_obj), existing_branches=existing_branches, current_ref=ref, **display_list)
         else:
             return render_template('graphonly.html', replace=False, existing_branches=existing_branches, current_ref=ref, **display_list)
     else:
         (tags, branches, remotes) = get_all_refs(repo)    
-        return render_template('base.html', tags=tags, branches=branches, remotes=remotes, current_ref=ref, initial_tree=tree_diff.get_tree_diff(head_obj.sha), existing_branches=existing_branches, **display_list)
+        return render_template('base.html', tags=tags, branches=branches, remotes=remotes, current_ref=ref, initial_tree=get_tree_diff_json(repo, head_obj), existing_branches=existing_branches, **display_list)
 
 def get_blob(obj):
     desired_mimetype = request.accept_mimetypes.best_match(['text/plain','text/html'],'text/html')
@@ -218,12 +221,23 @@ def get_blob_diff(repo, old_obj, obj):
         resp.mimetype = 'text/plain'
     return resp
 
+def get_tree_diff(repo, commit):
+    td = tree_diff.TreeDiffer(repo)
+    if len(commit.parents) != 1:
+        #This appears to be a merge (or the initial commit)
+        #TODO: three+ way diff? For now, just show the state after the merge
+        to_compare = commit
+    else:
+        to_compare = commit.parents[0]
+    return td.tree_diff(to_compare.tree, commit.tree)
+
+def get_tree_diff_json(repo, commit):
+    return json.dumps(get_tree_diff(repo, commit), cls=tree_diff.DiffEntryEncoder)
 
 def get_commit(repo, obj):
     #TODO: handle commits with > 1 parent (merges!)
-    oneback = obj.parents[0]
+    tree = list(get_tree_diff(repo, obj))
     td = tree_diff.TreeDiffer(repo)
-    tree = list(td.tree_diff(oneback.tree, obj.tree))
     
     changed_files = []
     for entry in tree:
