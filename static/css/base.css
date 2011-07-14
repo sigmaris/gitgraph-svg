@@ -232,10 +232,10 @@ dl dd {
   background-color: #FFEEBB;
 }
 
-.created .modified, .created .replaced {
+.created .modified, .created .replaced, .created ins {
   background-color: #9E9;
 }
 
-.deleted .modified, .deleted .replaced {
+.deleted .modified, .deleted .replaced, .deleted del {
   background-color: #E99;
 }

@@ -218,6 +218,56 @@ class TreeDiffer(object):
         self.repo = repo
         self.content = compare_content
         self.differ = difflib.Differ(lambda line: len(line.strip()) == 0, lambda char: char in string.whitespace)
+        self.context = 3
+        self.sm = difflib.SequenceMatcher(lambda line: len(line.strip()) == 0)
+        self.sm2 = difflib.SequenceMatcher(lambda line: len(line.strip()) == 0)
+
+    def _markup_line_diff(self, opcodes, old, new):
+        oldline = ''
+        newline = ''
+        for tag, i1, i2, j1, j2 in opcodes:
+            if tag == 'equal':
+                oldline += escape(old[i1:i2])
+                newline += escape(new[j1:j2])
+            elif tag == 'delete':
+                oldline += ('<del>' + escape(old[i1:i2]) + '</del>')
+            elif tag == 'insert':
+                newline += ('<ins>' + escape(new[j1:j2]) + '</ins>')
+            elif tag == 'replace':
+                oldline += ('<span class="replaced">' + escape(old[i1:i2]) + '</span>')
+                newline += ('<span class="replaced">' + escape(new[j1:j2]) + '</span>')
+        return (oldline, newline)
+    
+    def _context_diff(self, old, new):
+        self.sm.set_seqs(old,new)
+        groups = self.sm.get_grouped_opcodes(self.context)
+        separator = False
+        for group in groups:
+            if separator:
+                yield (DiffEntry.UNMODIFIED, None, None, '<hr />')
+            for tag, i1, i2, j1, j2 in group:
+                if tag == 'equal':
+                    for i in range(i2-i1):
+                        yield (DiffEntry.UNMODIFIED, i1 + i + 1, j1 + i + 1, escape(old[i1+i].rstrip()))
+                elif tag == 'delete':
+                    for i in range(i2-i1):
+                        yield (DiffEntry.DELETED, i1 + i + 1, None, escape(old[i1+i].rstrip()))
+                elif tag == 'insert':
+                    for j in range(j2-j1):
+                        yield (DiffEntry.CREATED, None, j1 + j + 1, escape(new[j1+j].rstrip()))
+                elif tag == 'replace':
+                    if i2 - i1 == j2 - j1:
+                        for i in range(i2-i1):
+                            self.sm2.set_seqs(old[i1 + i], new[j1 + i])
+                            (oldline, newline) = self._markup_line_diff(self.sm2.get_opcodes(),old[i1 + i], new[j1 + i])
+                            yield (DiffEntry.DELETED, i1 + i + 1, None, oldline.rstrip())
+                            yield (DiffEntry.CREATED, None, j1 + i + 1, newline.rstrip())
+                    else:
+                        for i in range(i2-i1):
+                            yield (DiffEntry.DELETED, i1 + i + 1, None, escape(old[i1+i].rstrip()))
+                        for j in range(j2-j1):
+                            yield (DiffEntry.CREATED, None, j1 + j + 1, escape(new[j1+j].rstrip()))
+            separator = True
     
     def commitdiff(self, entry):
         if entry.children:
@@ -261,7 +311,7 @@ class TreeDiffer(object):
                     else:
                         new_unicode = UnicodeDammit(new_content, smartQuotesTo=None).unicode.splitlines(True)
                         old_unicode = UnicodeDammit(old_content, smartQuotesTo=None).unicode.splitlines(True)
-                        yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': _filter_context(_htmlize_diff(self.differ.compare(old_unicode,new_unicode)), 3)}
+                        yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': self._context_diff(old_unicode,new_unicode)}
         return
     
     def diff(self, old, new, parent_name=None):
