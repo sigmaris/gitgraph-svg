@@ -75,29 +75,37 @@ class Grapher(object):
         return delete
 
     def draw_commits(self, walker, existing_branches=[], currentY=0):
+        """ This is the main function that draws the commits taken from a walk of the repository
+        (the walker object). It can optionally start with a number of existing branches and at a
+        given y-position."""
         column = 0
-        self.graph = []
+        self.graph = [] #stores a list of edges which aren't finished being drawn.
+        # display_list is a structure holding what should actually be drawn on the screen.
         self.display_list = {'edges':[], 'nodes':[], 'labels':[], 'authors':[], 'dates':[]}
+        # branches is an array of strings used to track where branches should go.
+        # A SHA hash in some position indicates that commit should be the next one in that position.
+        # An empty string indicates the position is blank and can be filled with a new branch if one appears.
         self.branches = []
         for existing_branch in existing_branches:
             if existing_branch:
+                # start drawing these existing branches
                 self.graph.append(self.new_edge(column, currentY, existing_branch))
             column = column + 1
+            # Keep track of existing branches
             self.branches.append(existing_branch)
         for commit in walker:
             pos = self.place_commit(commit, currentY)
-
+            
+            # Do any edges need finishing off?
             self.finish_edges(commit.sha, pos, currentY)
-
+            
             #The delete flag determines whether to mark this branch as deleted
             if commit.parents:
                 delete = self.process_parents(commit.parents, pos, currentY)
             else:
                 del self.branches[pos] #this branch has no parent, delete it
                 delete = False
-
-            self.display_list['nodes'].append(self.new_node(pos, currentY, commit.sha, [x.sha for x in commit.parents]))
-
+            
             #TODO: make this more elegant?
             textX = len(self.branches)
             for branch in reversed(self.branches):
@@ -106,10 +114,13 @@ class Grapher(object):
                 else:
                     break
             textX = max(textX,1)
-
+            
             if delete:
                 #clear out this branch for future use
                 self.branches[pos] = ''
+            
+            # Create a node representing this commit and the message, author and time labels
+            self.display_list['nodes'].append(self.new_node(pos, currentY, commit.sha, [x.sha for x in commit.parents]))
             label_text = ggutils.force_unicode(commit.message_short)
             self.display_list['labels'].append({'x': textX, 'y': currentY, 'content': label_text, 'sha': commit.sha})
             self.display_list['authors'].append({'x': 0, 'y': currentY, 'content': ggutils.force_unicode(commit.author[0]), 'sha': commit.sha})
