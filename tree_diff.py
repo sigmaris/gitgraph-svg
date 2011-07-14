@@ -1,5 +1,6 @@
 import pygit2
 import difflib
+import string
 import os
 from cgi import escape
 from flask import json, render_template
@@ -216,7 +217,7 @@ class TreeDiffer(object):
     def __init__(self, repo, compare_content=False):
         self.repo = repo
         self.content = compare_content
-        self.differ = difflib.Differ()
+        self.differ = difflib.Differ(lambda line: len(line.strip()) == 0, lambda char: char in string.whitespace)
     
     def commitdiff(self, entry):
         if entry.children:
