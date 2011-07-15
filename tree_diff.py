@@ -219,8 +219,9 @@ class TreeDiffer(object):
         self.content = compare_content
         self.differ = difflib.Differ(lambda line: len(line.strip()) == 0, lambda char: char in string.whitespace)
         self.context = 3
+        self.ignore_whitespace = True
         self.sm = difflib.SequenceMatcher(lambda line: len(line.strip()) == 0)
-        self.sm2 = difflib.SequenceMatcher(lambda line: len(line.strip()) == 0)
+        self.sm2 = difflib.SequenceMatcher(lambda char: char in string.whitespace)
 
     def _markup_line_diff(self, opcodes, old, new):
         oldline = ''
@@ -239,7 +240,11 @@ class TreeDiffer(object):
         return (oldline, newline)
     
     def _context_diff(self, old, new):
-        self.sm.set_seqs(old,new)
+        # Strip all whitespace
+        if self.ignore_whitespace:
+            self.sm.set_seqs([''.join(s.split()) for s in old],[''.join(s.split()) for s in new])
+        else:
+            self.sm.set_seqs(old,new)
         groups = self.sm.get_grouped_opcodes(self.context)
         separator = False
         for group in groups:
