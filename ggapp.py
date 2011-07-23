@@ -91,7 +91,7 @@ def get_blob_diff(repo, old_obj, obj):
             resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
         else:
             td = tree_diff.TreeDiffer(repo)
-            resp = app.make_response(render_template('changed_file.html', sha=obj.sha, file={'name': '', 'content': td.compare_data(old_obj.data, obj.data)}))
+            resp = app.make_response(render_template('changed_file.html', file={'name': '', 'sha':obj.sha, 'content': td.compare_data(old_obj.data, obj.data)}))
     else:
         resp = app.make_response("Plain text diff not supported yet")
         resp.mimetype = 'text/plain'

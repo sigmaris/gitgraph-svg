@@ -77,6 +77,7 @@ $(document).ready(function() {
         var diff_content = li_element.data('content');
         if(diff_content) {
           //Show content in pane
+          console.log("inline");
           $('#bottom_pane').html(diff_content);
         } else {
           //Load content via AJAX.. trim off the # from href

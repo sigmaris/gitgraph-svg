@@ -26,3 +26,23 @@ function load_commit(sha) {
     jQ('#bottom_pane').load('/sha/' + sha);
   }
 }
+
+var jQ = (window.parent ? window.parent.jQuery : window.jQuery);
+jQ(document).ready(function() {
+  
+  jQ('.label').live('click', function(event) {
+    var elementId = $(event.target).attr('id');
+    load_commit(elementId.substring(elementId.indexOf('_') + 1));
+    
+  }).live('mouseover', function(inEvent) {
+    $(inEvent.target).css('text-decoration','underline');
+    
+  }).live('mouseout', function(outEvent) {
+    $(outEvent.target).css('text-decoration','');
+  });
+  
+  jQ('.node').live('click', function(event) {
+    load_commit($(event.target).attr('id'));
+  });
+  
+});
