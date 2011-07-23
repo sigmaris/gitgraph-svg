@@ -72,7 +72,7 @@
                 <svg id="authors_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{authors|length * 20}}px">
                   <g id="authors_svg_group" transform="translate(10,10)">
                     {% for label in authors %}
-                    <text id="label_{{label.sha}}" class="label" onclick="load_commit('{{label.sha}}')" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
+                    <text id="author_{{label.sha}}" class="label" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
                     {% endfor %}
                   </g>
                 </svg>
@@ -81,7 +81,7 @@
                 <svg id="dates_svg" xmlns="http://www.w3.org/2000/svg" version="1.1" preserveAspectRatio="xMidYMid slice" width="100%" height="{{dates|length * 20}}px">
                   <g id="dates_svg_group" transform="translate(10,10)">
                     {% for label in dates %}
-                    <text id="label_{{label.sha}}" class="label" onclick="load_commit('{{label.sha}}')" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
+                    <text id="date_{{label.sha}}" class="label" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
                     {% endfor %}
                   </g>
                 </svg>

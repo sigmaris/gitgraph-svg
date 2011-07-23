@@ -41,7 +41,7 @@ function setupDraggables() {
 }
 
 $(document).ajaxStart(function() {
-  gitgraph.loaderTimeout = setTimeout("$('.loader').show();", 100);
+  gitgraph.loaderTimeout = setTimeout("$('.loader').show();", 200);
 });
 
 $(document).ajaxStop(function() {
@@ -77,7 +77,6 @@ $(document).ready(function() {
         var diff_content = li_element.data('content');
         if(diff_content) {
           //Show content in pane
-          console.log("inline");
           $('#bottom_pane').html(diff_content);
         } else {
           //Load content via AJAX.. trim off the # from href

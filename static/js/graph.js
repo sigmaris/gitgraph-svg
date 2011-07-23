@@ -1,5 +1,5 @@
 function highlight(event, ids, colour) {
-  var jQ = (window.parent ? window.parent.jQuery : window.jQuery); 
+  $(window.parent ? window.parent.jQuery : window.jQuery); 
   var svg = jQ(event.target).parents('svg');
   for(var index in ids) {
     jQ('#' + ids[index], svg).attr('fill', colour);
@@ -23,7 +23,12 @@ function load_commit(sha) {
       console.log("Busy loading another commit...");
     }
   } else {
-    jQ('#bottom_pane').load('/sha/' + sha);
+    jQ('#bottom_pane').load('/sha/' + sha, '', function(responseText, textStatus, jqXHR) {
+      if(textStatus == 'success' || textstatus == 'notmodified') {
+        jQ('.label').attr('fill','black');
+        jQ('#label_'+sha+', #author_'+sha+', #date_'+sha).attr('fill','blue');
+      }
+    });
   }
 }
 
