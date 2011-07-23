@@ -104,6 +104,6 @@ $(document).ready(function() {
   });
 
   $('#ref_select').change(function() {
-    $('#reveal_ajax').load('/'+$('#ref_select').val());
+    window.location.href ='/'+$('#ref_select').val();
   })
 });
