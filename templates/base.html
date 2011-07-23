@@ -17,7 +17,8 @@
   gitgraph.initial_tree = {{initial_tree|safe}};
   gitgraph.existing_branches = {{existing_branches|tojson|safe}};
   gitgraph.loaded_count = {{nodes|length}};
-  gitgraph.current_ref = {{current_ref|tojson|safe}}
+  gitgraph.current_ref = {{current_ref|tojson|safe}};
+  gitgraph.current_head = {{commit.sha|tojson|safe}};
   //]]>
   </script>
   <script type="text/javascript" src="/static/js/graph.js"></script>

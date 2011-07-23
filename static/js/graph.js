@@ -1,19 +1,7 @@
-function highlight(event, ids, colour) {
-  $(window.parent ? window.parent.jQuery : window.jQuery); 
-  var svg = jQ(event.target).parents('svg');
-  for(var index in ids) {
-    jQ('#' + ids[index], svg).attr('fill', colour);
-    jQ('.parent_' + ids[index],svg).addClass('highlight');
-  }
-}
-
-function unhighlight(event, ids) {
-  var jQ = (window.parent ? window.parent.jQuery : window.jQuery); 
-  var svg = jQ(event.target).parents('svg'); 
-  for(var index in ids) {
-    jQ('#' + ids[index], svg).attr('fill', 'white');
-    jQ('.parent_' + ids[index],svg).removeClass('highlight');
-  }
+function highlight(sha) {
+  var jQ = (window.parent ? window.parent.jQuery : window.jQuery);
+  jQ('.label').attr('fill','black');
+  jQ('#label_'+sha+', #author_'+sha+', #date_'+sha).attr('fill','blue');
 }
 
 function load_commit(sha) {
@@ -25,8 +13,7 @@ function load_commit(sha) {
   } else {
     jQ('#bottom_pane').load('/sha/' + sha, '', function(responseText, textStatus, jqXHR) {
       if(textStatus == 'success' || textStatus == 'notmodified') {
-        jQ('.label').attr('fill','black');
-        jQ('#label_'+sha+', #author_'+sha+', #date_'+sha).attr('fill','blue');
+        highlight(sha);
       }
     });
   }

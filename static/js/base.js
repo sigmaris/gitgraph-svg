@@ -106,4 +106,6 @@ $(document).ready(function() {
   $('#ref_select').change(function() {
     window.location.href ='/'+$('#ref_select').val();
   })
+  
+  highlight(gitgraph.current_head);
 });
