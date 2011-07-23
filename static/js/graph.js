@@ -24,7 +24,7 @@ function load_commit(sha) {
     }
   } else {
     jQ('#bottom_pane').load('/sha/' + sha, '', function(responseText, textStatus, jqXHR) {
-      if(textStatus == 'success' || textstatus == 'notmodified') {
+      if(textStatus == 'success' || textStatus == 'notmodified') {
         jQ('.label').attr('fill','black');
         jQ('#label_'+sha+', #author_'+sha+', #date_'+sha).attr('fill','blue');
       }

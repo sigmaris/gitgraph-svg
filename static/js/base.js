@@ -88,7 +88,7 @@ $(document).ready(function() {
           }
           var sha_to_load = a_element.attr('href').substring(1);
           $('#bottom_pane').load('/sha/' + sha_to_load, $.param(data), function(responseText, textStatus, jqXHR) {
-            if(textStatus == 'success' || textstatus == 'notmodified') {
+            if(textStatus == 'success' || textStatus == 'notmodified') {
               $('#filename_' + sha_to_load).text(li_element.data('full_name')).append($('<a class="nav_link" href="#changed_line">(Go to first change)</a>'));
             }
           });
