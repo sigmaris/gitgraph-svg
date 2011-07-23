@@ -59,8 +59,9 @@ def display_graph(ref):
         else:
             return render_template('graphonly.html', replace=False, existing_branches=existing_branches, current_ref=ref, **display_list)
     else:
-        (tags, branches, remotes) = get_all_refs(repo)    
-        return render_template('base.html', tags=tags, branches=branches, remotes=remotes, current_ref=ref, initial_tree=get_tree_diff_json(repo, head_obj), existing_branches=existing_branches, **display_list)
+        (tags, branches, remotes) = get_all_refs(repo)
+        extra_template_data = dict(display_list.items() + get_commit_templatedata(repo, head_obj).items())
+        return render_template('base.html', tags=tags, branches=branches, remotes=remotes, current_ref=ref, existing_branches=existing_branches, **extra_template_data)
 
 def get_blob(obj):
     desired_mimetype = request.accept_mimetypes.best_match(['text/plain','text/html'],'text/html')
@@ -110,7 +111,7 @@ def get_tree_diff(repo, commit):
 def get_tree_diff_json(repo, commit):
     return json.dumps(get_tree_diff(repo, commit), cls=tree_diff.DiffEntryEncoder)
 
-def get_commit(repo, obj):
+def get_commit_templatedata(repo, obj):
     #TODO: handle commits with > 1 parent (merges!)
     tree = list(get_tree_diff(repo, obj))
     td = tree_diff.TreeDiffer(repo)
@@ -121,20 +122,24 @@ def get_commit(repo, obj):
             changed_files.extend(td.commitdiff(entry))
     
     jsontree = json.dumps(tree, cls=tree_diff.DiffEntryEncoder)
+    message = ggutils.force_unicode(obj.message)
+    title = ggutils.force_unicode(obj.message_short)
+    author = (ggutils.force_unicode(obj.author[0]), ggutils.force_unicode(obj.author[1]))
+    committer = (ggutils.force_unicode(obj.committer[0]), ggutils.force_unicode(obj.committer[1]))
+    author_time = ggutils.format_commit_time(obj.author[2])
+    commit_time = ggutils.format_commit_time(obj.committer[2])
+    return dict(commit=obj, message=message, title=title, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=jsontree, changed_files=changed_files)
+    
+def get_commit(repo, obj):
     desired_mimetype = request.accept_mimetypes.best_match(['application/json','text/html'],'text/html')
+    templatedata = get_commit_templatedata(repo, obj)
     if desired_mimetype == 'application/json':
-        resp = app.make_response(jsontree)
+        resp = app.make_response(templatedata['initial_tree'])
         resp.mimetype = 'application/json'
         return resp
     else:
         #handle HTML view of commits with diffs on each file
-        message = ggutils.force_unicode(obj.message)
-        title = ggutils.force_unicode(obj.message_short)
-        author = (ggutils.force_unicode(obj.author[0]), ggutils.force_unicode(obj.author[1]))
-        committer = (ggutils.force_unicode(obj.committer[0]), ggutils.force_unicode(obj.committer[1]))
-        author_time = ggutils.format_commit_time(obj.author[2])
-        commit_time = ggutils.format_commit_time(obj.committer[2])
-        return render_template('commit.html', commit=obj, message=message, title=title, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=jsontree, changed_files=changed_files)
+        return render_template('commit.html', **templatedata)
 
 REMOTE_REGEX = re.compile(r'^refs/remotes/(?P<remote>[^/]+)/(?P<branch>.+)')
 def get_all_refs(repo):

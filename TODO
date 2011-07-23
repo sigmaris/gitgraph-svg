@@ -1,2 +1,6 @@
+* Display the HEAD commit when changing refs
 * Add global error handling to AJAX functions
 * Display the current commit in toolbar (or title)
+* Handle changed images better - stop using filetable
+* Handle diffs with two branches for merges
+* When displaying a commit, scroll the tree to show the changed files
