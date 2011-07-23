@@ -65,37 +65,37 @@ def display_graph(ref):
 
 def get_blob(obj):
     desired_mimetype = request.accept_mimetypes.best_match(['text/plain','text/html'],'text/html')
+    is_binary = '\0' in obj.data
     if desired_mimetype == 'text/html':
         #TODO: only return a snippet, as here, if this is an AJAX request. Otherwise return a full page?
-        if '\0' in obj.data:
+        if is_binary:
             resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
         else:
             # We need to pass unicode to Jinja2, so convert using UnicodeDammit:
             resp = app.make_response(render_template('simple_file.html', sha=obj.sha, content=ggutils.force_unicode(obj.data).splitlines()))
     else:
         resp = app.make_response(obj.data)
-        try:
-            filename_hint = request.args['filename']
+        # At this point, we have some data, but no idea what mimetype it should be.
+        # It may be an image file with a certain filename - if so, the client will
+        # pass the filename as a hint to the server and we can use that.
+        filename_hint = request.args.get('filename',None)
+        guessed_type = None
+        if filename_hint:
             guessed_type = mimetypes.guess_type(filename_hint)[0]
-            if guessed_type:
-                resp.mimetype = guessed_type
-            else:
-                resp.mimetype = 'text/plain'
-        except KeyError:
+        if guessed_type:
+            resp.mimetype = guessed_type
+        elif is_binary:
+            resp.mimetype = 'application/octet-stream'
+        else:
             resp.mimetype = 'text/plain'
     return resp
 
 def get_blob_diff(repo, old_obj, obj):
-    desired_mimetype = request.accept_mimetypes.best_match(['text/plain','text/html'],'text/html')
-    if desired_mimetype == 'text/html':
-        if '\0' in obj.data or '\0' in old_obj.data:
-            resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
-        else:
-            td = tree_diff.TreeDiffer(repo)
-            resp = app.make_response(render_template('changed_file.html', file={'name': '', 'sha':obj.sha, 'content': td.compare_data(old_obj.data, obj.data)}))
+    if '\0' in obj.data or '\0' in old_obj.data:
+        resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
     else:
-        resp = app.make_response("Plain text diff not supported yet")
-        resp.mimetype = 'text/plain'
+        td = tree_diff.TreeDiffer(repo)
+        resp = app.make_response(render_template('changed_file.html', file={'name': '', 'sha':obj.sha, 'content': td.compare_data(old_obj.data, obj.data)}))
     return resp
 
 def get_tree_diff(repo, commit):
