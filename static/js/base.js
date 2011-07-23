@@ -58,7 +58,7 @@ $(document).ready(function() {
   $.ajaxSetup({
     traditional: true
   });
-    
+  
   $('#left_tree').jstree({
     "themes" : { "theme": "apple", "url" : "/static/themes/apple/style.css", dots: false },
     "json_data" : {

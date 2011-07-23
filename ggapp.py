@@ -54,10 +54,7 @@ def display_graph(ref):
     branches = request.args.getlist('branches')
     (display_list, existing_branches) = grapher.draw_commits(walker, branches, offset)
     if request.is_xhr:
-        if offset == 0:
-            return render_template('graphonly.html', replace=True, initial_tree=get_tree_diff_json(repo, head_obj), existing_branches=existing_branches, current_ref=ref, **display_list)
-        else:
-            return render_template('graphonly.html', replace=False, existing_branches=existing_branches, current_ref=ref, **display_list)
+        return render_template('graphonly.html', existing_branches=existing_branches, current_ref=ref, **display_list)
     else:
         (tags, branches, remotes) = get_all_refs(repo)
         extra_template_data = dict(display_list.items() + get_commit_templatedata(repo, head_obj).items())
