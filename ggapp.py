@@ -179,6 +179,4 @@ def get_sha(sha):
         flask.abort(404)
 
 if __name__ == '__main__':
-    #app = ProfilerMiddleware(app, sort_by=('calls','time'))
     app.run(debug=True)
-    #run_simple('localhost', 5000, app, use_reloader=True, use_debugger=True)

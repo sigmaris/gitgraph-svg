@@ -45,6 +45,15 @@ class DiffEntry(object):
         except KeyError:
             #Probably a reference to other project
             self.reference = True
+    
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.children[key]
+        else:
+            raise TypeError
+    
+    def __str__(self):
+        return "<tree_diff.DiffEntry: {0} {1} sha:{2}>".format(self.basename, self.kind, self.sha)
 
 class Modified(DiffEntry):
     def __init__(self, old_entry, new_entry, children=[], parent_name=None):
@@ -62,6 +71,9 @@ class Modified(DiffEntry):
         self.kind = DiffEntry.MODIFIED
         self.reference = False
 
+    def __str__(self):
+        return "<tree_diff.DiffEntry: {0} {1} sha:{2} old_sha:{3}>".format(self.basename, self.kind, self.sha, self.old_sha)
+
 def _open_tag(char):
     return {
         '^': '<span class="replaced">',
@@ -76,52 +88,6 @@ def _close_tag(char):
         '-': '</del>'
     }.get(char,'')
 
-def _kind(char):
-    return {
-        '^': DiffEntry.MODIFIED,
-        '+': DiffEntry.CREATED,
-        '-': DiffEntry.DELETED
-    }.get(char,DiffEntry.UNMODIFIED)
-
-def _htmlize_line(line, tags):
-    lastchar = None
-    n = 0
-    for i in range(len(tags)):
-        char = tags[i]
-        if char != lastchar:
-            yield escape(line[n:i]) + _close_tag(lastchar) + _open_tag(char)
-            n = i
-            lastchar = char
-    yield escape(line[n:i+1]) + _close_tag(lastchar) + escape(line[i+1:])
-
-def _increment(line_numbers, char):
-    return {
-        '?': (line_numbers, line_numbers),
-        '+': ((line_numbers[0], line_numbers[1] + 1), (None, line_numbers[1] + 1)),
-        '-': ((line_numbers[0] + 1, line_numbers[1]), (line_numbers[0] + 1, None))
-    }.get(char,((line_numbers[0] + 1, line_numbers[1] + 1),(line_numbers[0] + 1, line_numbers[1] + 1)))
-
-def _htmlize_diff(lines):
-    """Takes the output of difflib.Differ.compare, a sequence of lines with +/-/? prefixes,
-    and uses the ? ... lines to tag previous lines with <ins>, <del>, and
-    <span class="replaced"> tags to indicate changed character ranges within the lines."""
-    i = iter(lines)
-    prev = i.next()
-    line_numbers = (0,0)
-    for line in i:
-        if line[:2] == '? ':
-            (line_numbers, display) = _increment(line_numbers, prev[0])
-            yield (_kind(prev[0]), display[0], display[1], _open_tag(prev[0]) + ''.join(_htmlize_line(prev[2:].rstrip(), line[2:].rstrip())) + _close_tag(prev[0]))
-            prev = None
-            continue
-        elif prev != None:
-            (line_numbers, display) = _increment(line_numbers, prev[0])
-            yield (_kind(prev[0]), display[0], display[1], _open_tag(prev[0]) + escape(prev[2:].rstrip()) + _close_tag(prev[0]))
-        prev = line
-    if prev != None:
-        (line_numbers, display) = _increment(line_numbers, prev[0])
-        yield (_kind(prev[0]), display[0], display[1], _open_tag(prev[0]) + escape(prev[2:].rstrip()) + _close_tag(prev[0]))
-
 def _all_inserted(lines):
     line_number = 1
     for line in lines:
@@ -133,39 +99,6 @@ def _all_deleted(lines):
     for line in lines:
         yield (DiffEntry.DELETED, line_number, None, _open_tag('-') + escape(line.rstrip()) + _close_tag('-'))
         line_number = line_number + 1
-
-def _filter_context(lines, context):
-    i = iter(lines)
-    context_q = []
-    divider = False
-    while True:
-        try:
-            (kind,num_old,num_new,line) = i.next()
-            if kind == DiffEntry.CREATED or kind == DiffEntry.DELETED:
-                #flush context lines
-                if divider:
-                    yield (DiffEntry.UNMODIFIED,0,0,'<hr />')
-                divider = True
-                for ctx_line in context_q:
-                    yield ctx_line
-                
-                #write this line
-                yield (kind,num_old,num_new,line)
-                
-                #write n lines of context
-                n = 0
-                while n < context:
-                    (kind,num_old,num_new,line) = i.next()
-                    yield (kind,num_old,num_new,line)
-                    if kind != DiffEntry.CREATED and kind != DiffEntry.DELETED:
-                        n = n + 1
-                context_q = []
-            else:
-                context_q.append((kind,num_old,num_new,line))
-                if len(context_q) > context:
-                    del context_q[0]
-        except StopIteration:
-            break
 
 class DiffEntryEncoder(json.JSONEncoder):
     def default(self, o):
@@ -217,7 +150,6 @@ class TreeDiffer(object):
     def __init__(self, repo, compare_content=False):
         self.repo = repo
         self.content = compare_content
-        self.differ = difflib.Differ(lambda line: len(line.strip()) == 0, lambda char: char in string.whitespace)
         self.context = 3
         self.ignore_whitespace = True
         self.sm = difflib.SequenceMatcher(lambda line: len(line.strip()) == 0)
@@ -239,39 +171,52 @@ class TreeDiffer(object):
                 newline += ('<span class="replaced">' + escape(new[j1:j2]) + '</span>')
         return (oldline, newline)
     
-    def _context_diff(self, old, new):
-        # Strip all whitespace
+    def _markup_diff(self, old, new, opcodes):
+        for tag, i1, i2, j1, j2 in opcodes:
+            if tag == 'equal':
+                for i in range(i2-i1):
+                    yield (DiffEntry.UNMODIFIED, i1 + i + 1, j1 + i + 1, escape(old[i1+i].rstrip()))
+            elif tag == 'delete':
+                for i in range(i2-i1):
+                    yield (DiffEntry.DELETED, i1 + i + 1, None, escape(old[i1+i].rstrip()))
+            elif tag == 'insert':
+                for j in range(j2-j1):
+                    yield (DiffEntry.CREATED, None, j1 + j + 1, escape(new[j1+j].rstrip()))
+            elif tag == 'replace':
+                if i2 - i1 == j2 - j1:
+                    for i in range(i2-i1):
+                        self.sm2.set_seqs(old[i1 + i], new[j1 + i])
+                        (oldline, newline) = self._markup_line_diff(self.sm2.get_opcodes(),old[i1 + i], new[j1 + i])
+                        yield (DiffEntry.DELETED, i1 + i + 1, None, oldline.rstrip())
+                        yield (DiffEntry.CREATED, None, j1 + i + 1, newline.rstrip())
+                else:
+                    for i in range(i2-i1):
+                        yield (DiffEntry.DELETED, i1 + i + 1, None, escape(old[i1+i].rstrip()))
+                    for j in range(j2-j1):
+                        yield (DiffEntry.CREATED, None, j1 + j + 1, escape(new[j1+j].rstrip()))
+    
+    def _set_sm_seqs(self, old, new):
+        # Strip all whitespace from lines
         if self.ignore_whitespace:
             self.sm.set_seqs([''.join(s.split()) for s in old],[''.join(s.split()) for s in new])
         else:
             self.sm.set_seqs(old,new)
+        
+    def _full_diff(self, old, new):
+        self._set_sm_seqs(old,new)
+        changes = self.sm.get_opcodes()
+        for change in self._markup_diff(old, new, changes):
+            yield change
+        
+    def _context_diff(self, old, new):
+        self._set_sm_seqs(old,new)
         groups = self.sm.get_grouped_opcodes(self.context)
         separator = False
         for group in groups:
             if separator:
                 yield (DiffEntry.UNMODIFIED, None, None, '<hr />')
-            for tag, i1, i2, j1, j2 in group:
-                if tag == 'equal':
-                    for i in range(i2-i1):
-                        yield (DiffEntry.UNMODIFIED, i1 + i + 1, j1 + i + 1, escape(old[i1+i].rstrip()))
-                elif tag == 'delete':
-                    for i in range(i2-i1):
-                        yield (DiffEntry.DELETED, i1 + i + 1, None, escape(old[i1+i].rstrip()))
-                elif tag == 'insert':
-                    for j in range(j2-j1):
-                        yield (DiffEntry.CREATED, None, j1 + j + 1, escape(new[j1+j].rstrip()))
-                elif tag == 'replace':
-                    if i2 - i1 == j2 - j1:
-                        for i in range(i2-i1):
-                            self.sm2.set_seqs(old[i1 + i], new[j1 + i])
-                            (oldline, newline) = self._markup_line_diff(self.sm2.get_opcodes(),old[i1 + i], new[j1 + i])
-                            yield (DiffEntry.DELETED, i1 + i + 1, None, oldline.rstrip())
-                            yield (DiffEntry.CREATED, None, j1 + i + 1, newline.rstrip())
-                    else:
-                        for i in range(i2-i1):
-                            yield (DiffEntry.DELETED, i1 + i + 1, None, escape(old[i1+i].rstrip()))
-                        for j in range(j2-j1):
-                            yield (DiffEntry.CREATED, None, j1 + j + 1, escape(new[j1+j].rstrip()))
+            for change in self._markup_diff(old, new, group):
+                yield change
             separator = True
     
     def commitdiff(self, entry):
@@ -289,7 +234,7 @@ class TreeDiffer(object):
                     else:
                         yield {'name': entry.name, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.CREATED,0,0,'(Binary file, created)')]}
                 else:
-                    yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': _all_inserted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
+                    yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': _all_inserted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines())}
             elif entry.kind == DiffEntry.DELETED:
                 entry_content = self.repo[entry.sha].read_raw()
                 if '\0' in entry_content:
@@ -299,7 +244,7 @@ class TreeDiffer(object):
                     else:
                         yield {'name': entry.name, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.DELETED,0,0,'(Binary file, deleted)')]}
                 else:
-                    yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': _all_deleted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines(True))}
+                    yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': _all_deleted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines())}
             elif entry.kind == DiffEntry.MODIFIED:
                 #Use the already calculated diff in content?
                 if hasattr(entry, 'content'):
@@ -314,10 +259,9 @@ class TreeDiffer(object):
                         else:
                             yield {'name': entry.name, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.MODIFIED,0,0,'(Binary file, modified)')]}
                     else:
-                        new_unicode = UnicodeDammit(new_content, smartQuotesTo=None).unicode.splitlines(True)
-                        old_unicode = UnicodeDammit(old_content, smartQuotesTo=None).unicode.splitlines(True)
+                        new_unicode = UnicodeDammit(new_content, smartQuotesTo=None).unicode.splitlines()
+                        old_unicode = UnicodeDammit(old_content, smartQuotesTo=None).unicode.splitlines()
                         yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': self._context_diff(old_unicode,new_unicode)}
-        return
     
     def diff(self, old, new, parent_name=None):
         try:
@@ -384,7 +328,6 @@ class TreeDiffer(object):
         return result
     
     def compare_data(self, old_data, new_data):
-        old_data = UnicodeDammit(old_data, smartQuotesTo=None).unicode
-        new_data = UnicodeDammit(new_data, smartQuotesTo=None).unicode
-        compared = self.differ.compare(old_data.splitlines(True), new_data.splitlines(True))
-        return _htmlize_diff(compared)
+        old_data = UnicodeDammit(old_data, smartQuotesTo=None).unicode.splitlines()
+        new_data = UnicodeDammit(new_data, smartQuotesTo=None).unicode.splitlines()
+        return self._full_diff(old_data, new_data)
