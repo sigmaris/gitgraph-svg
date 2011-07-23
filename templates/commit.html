@@ -24,7 +24,7 @@
   <pre class="commit_msg">{{message}}</pre>
   <ul>
     {% for file in changed_files %}
-    <li><a href="#filename_{{file.sha}}">{{file.name}}</a></li>
+    <li>{{file.kind}} <a href="#filename_{{file.sha}}">{{file.name}}</a></li>
     {% endfor %}
   </ul>
   {% for file in changed_files %}

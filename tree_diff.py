@@ -74,30 +74,16 @@ class Modified(DiffEntry):
     def __str__(self):
         return "<tree_diff.DiffEntry: {0} {1} sha:{2} old_sha:{3}>".format(self.basename, self.kind, self.sha, self.old_sha)
 
-def _open_tag(char):
-    return {
-        '^': '<span class="replaced">',
-        '+': '<ins>',
-        '-': '<del>'
-    }.get(char,'')
-
-def _close_tag(char):
-    return {
-        '^': '</span>',
-        '+': '</ins>',
-        '-': '</del>'
-    }.get(char,'')
-
 def _all_inserted(lines):
     line_number = 1
     for line in lines:
-        yield (DiffEntry.CREATED, None, line_number, _open_tag('+') + escape(line.rstrip()) + _close_tag('+'))
+        yield (DiffEntry.CREATED, None, line_number, escape(line.rstrip()))
         line_number = line_number + 1
 
 def _all_deleted(lines):
     line_number = 1
     for line in lines:
-        yield (DiffEntry.DELETED, line_number, None, _open_tag('-') + escape(line.rstrip()) + _close_tag('-'))
+        yield (DiffEntry.DELETED, line_number, None, escape(line.rstrip()))
         line_number = line_number + 1
 
 class DiffEntryEncoder(json.JSONEncoder):
@@ -230,38 +216,38 @@ class TreeDiffer(object):
                 if '\0' in entry_content:
                     #Binary file
                     if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
-                        yield {'name': entry.name, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.CREATED}
+                        yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.CREATED}
                     else:
-                        yield {'name': entry.name, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.CREATED,0,0,'(Binary file, created)')]}
+                        yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.CREATED,0,0,'(Binary file, created)')]}
                 else:
-                    yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': _all_inserted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines())}
+                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_inserted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines())}
             elif entry.kind == DiffEntry.DELETED:
                 entry_content = self.repo[entry.sha].read_raw()
                 if '\0' in entry_content:
                     #Binary file
                     if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
-                        yield {'name': entry.name, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.CREATED}
+                        yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.CREATED}
                     else:
-                        yield {'name': entry.name, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.DELETED,0,0,'(Binary file, deleted)')]}
+                        yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.DELETED,0,0,'(Binary file, deleted)')]}
                 else:
-                    yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': _all_deleted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines())}
+                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_deleted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines())}
             elif entry.kind == DiffEntry.MODIFIED:
                 #Use the already calculated diff in content?
                 if hasattr(entry, 'content'):
-                    yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': _filter_context(entry.content, 3)}
+                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _filter_context(entry.content, 3)}
                 else:
                     new_content = self.repo[entry.sha].read_raw()
                     old_content = self.repo[entry.old_sha].read_raw()
                     if '\0' in new_content or '\0' in old_content:
                         #Binary file
                         if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
-                            yield {'name': entry.name, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.MODIFIED, 'old_sha': entry.old_sha }
+                            yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.MODIFIED, 'old_sha': entry.old_sha }
                         else:
-                            yield {'name': entry.name, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.MODIFIED,0,0,'(Binary file, modified)')]}
+                            yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.MODIFIED,0,0,'(Binary file, modified)')]}
                     else:
                         new_unicode = UnicodeDammit(new_content, smartQuotesTo=None).unicode.splitlines()
                         old_unicode = UnicodeDammit(old_content, smartQuotesTo=None).unicode.splitlines()
-                        yield {'name': entry.name, 'sha': entry.sha, 'binary': False, 'content': self._context_diff(old_unicode,new_unicode)}
+                        yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': self._context_diff(old_unicode,new_unicode)}
     
     def diff(self, old, new, parent_name=None):
         try:
