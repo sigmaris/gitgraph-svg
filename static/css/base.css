@@ -214,7 +214,7 @@ dl dd {
   text-align: left;
 }
 
-.back_to_top {
+.nav_link {
   float: right;
 }
 
@@ -238,4 +238,8 @@ dl dd {
 
 .deleted .modified, .deleted .replaced, .deleted del {
   background-color: #E99;
+}
+
+img.created, img.deleted, img.modified, img.replaced {
+  background-color: #fff;
 }

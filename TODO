@@ -1,0 +1,2 @@
+* Add global error handling to AJAX functions
+* Display the current commit in toolbar (or title)
