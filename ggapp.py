@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, escape, Markup, json
+from flask import Flask, render_template, request, escape, Markup, json, abort
 from werkzeug.routing import BaseConverter
 from werkzeug import run_simple
 from werkzeug.contrib.profiler import ProfilerMiddleware
@@ -37,6 +37,7 @@ def display_page():
 
 @app.route('/<ref:ref>')
 def display_graph(ref):
+    """Displays the main graph view, starting at a certain ref (a branch, tag or remote branch)"""
     offset = request.args.get('offset',0,type=int)
     headref = repo.lookup_reference(ref)
     grapher = graph.Grapher()
@@ -61,6 +62,7 @@ def display_graph(ref):
         return render_template('base.html', tags=tags, branches=branches, remotes=remotes, current_ref=ref, existing_branches=existing_branches, **extra_template_data)
 
 def get_blob(obj):
+    """Displays the contents of a blob, either in an HTML table with numbered lines, or as binary/plaintext"""
     desired_mimetype = request.accept_mimetypes.best_match(['text/plain','text/html'],'text/html')
     is_binary = '\0' in obj.data
     if desired_mimetype == 'text/html':
@@ -88,6 +90,7 @@ def get_blob(obj):
     return resp
 
 def get_blob_diff(repo, old_obj, obj):
+    """Displays the differences between two versions of a blob, as HTML in a table."""
     if '\0' in obj.data or '\0' in old_obj.data:
         resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
     else:
@@ -105,11 +108,10 @@ def get_tree_diff(repo, commit):
         to_compare = commit.parents[0]
     return td.tree_diff(to_compare.tree, commit.tree)
 
-def get_tree_diff_json(repo, commit):
-    return json.dumps(get_tree_diff(repo, commit), cls=tree_diff.DiffEntryEncoder)
-
 def get_commit_templatedata(repo, obj):
-    #TODO: handle commits with > 1 parent (merges!)
+    """Gets the required data to feed into the templates which display a single commit, including the tree changes
+    in the commit, author and committer info, time and commit messages, and list of changed files. Returns a dict
+    with appropriate key names for the templates to use."""
     tree = list(get_tree_diff(repo, obj))
     td = tree_diff.TreeDiffer(repo)
     
@@ -128,6 +130,7 @@ def get_commit_templatedata(repo, obj):
     return dict(commit=obj, message=message, title=title, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=jsontree, changed_files=changed_files)
     
 def get_commit(repo, obj):
+    """Displays a single commit as HTML (used to load a commit's information into the bottom pane)."""
     desired_mimetype = request.accept_mimetypes.best_match(['application/json','text/html'],'text/html')
     templatedata = get_commit_templatedata(repo, obj)
     if desired_mimetype == 'application/json':
@@ -140,6 +143,9 @@ def get_commit(repo, obj):
 
 REMOTE_REGEX = re.compile(r'^refs/remotes/(?P<remote>[^/]+)/(?P<branch>.+)')
 def get_all_refs(repo):
+    """Returns a tuple (tags, branches, remotes) where tags and branches are lists
+    of tags and local branches, respectively, and remotes is a dict where the keys
+    are remote names and the values are lists of branches in that remote."""
     allrefs = repo.listall_references()
     tags = []
     branches = []
@@ -161,6 +167,8 @@ def get_all_refs(repo):
 
 @app.route('/sha/<sha:sha>')
 def get_sha(sha):
+    """Displays either a blob (optionally comparing it to another blob) or
+    a single commit."""
     try:
         obj = repo[sha]
         if obj.type == pygit2.GIT_OBJ_BLOB:
@@ -178,7 +186,7 @@ def get_sha(sha):
         abort(400)
     except KeyError:
         #SHA not found in repo
-        flask.abort(404)
+        abort(404)
 
 if __name__ == '__main__':
     app.run(debug=True)
