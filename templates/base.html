@@ -27,20 +27,21 @@
 <body>
   <div id="toolbar">
     <select id="ref_select" name="ref_select">
+      <option value="">Current HEAD</option>
       <optgroup label="Branches">
       {% for branch in branches|sort %}
-        <option value="refs/heads/{{branch}}">{{branch}}</option>
+        <option {% if current_ref == "refs/heads/" ~ branch %}selected="selected"{% endif %} value="refs/heads/{{branch}}">{{branch}}</option>
       {% endfor %}
       </optgroup>
       <optgroup label="Tags">
       {% for tag in tags|sort %}
-        <option value="refs/tags/{{tag}}">{{tag}}</option>
+        <option {% if current_ref == "refs/tags/" ~ tag %}selected="selected"{% endif %} value="refs/tags/{{tag}}">{{tag}}</option>
       {% endfor %}
       </optgroup>
       {% for remote in remotes.keys()|sort %}
       <optgroup label="Remote: {{remote}}">
         {% for rbranch in remotes[remote]|sort %}
-        <option value="refs/remotes/{{remote}}/{{rbranch}}">{{rbranch}}</option>
+        <option {% if current_ref == ["refs/remotes",remote,rbranch]|join('/') %}selected="selected"{% endif %} value="refs/remotes/{{remote}}/{{rbranch}}">{{rbranch}}</option>
         {% endfor %}
       </optgroup>
       {% endfor %}
