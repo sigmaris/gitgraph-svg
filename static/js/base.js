@@ -59,6 +59,10 @@ $(document).ready(function() {
     traditional: true
   });
   
+  $(document).ajaxError(function(event, jqXHR, settings, thrownError) {
+    alert("There was an error fetching data from " + settings.url + ":\n" + thrownError);
+  });
+  
   $('#left_tree').jstree({
     "themes" : { "theme": "apple", "url" : "/static/themes/apple/style.css", dots: false },
     "json_data" : {

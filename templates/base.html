@@ -27,7 +27,7 @@
 <body>
   <div id="toolbar">
     <select id="ref_select" name="ref_select">
-      <option value="">Current HEAD</option>
+      <option {% if current_ref == "HEAD" %}selected="selected"{% endif %} value="">Current HEAD</option>
       <optgroup label="Branches">
       {% for branch in branches|sort %}
         <option {% if current_ref == "refs/heads/" ~ branch %}selected="selected"{% endif %} value="refs/heads/{{branch}}">{{branch}}</option>

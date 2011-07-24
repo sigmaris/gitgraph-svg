@@ -77,7 +77,9 @@ class Grapher(object):
     def draw_commits(self, walker, existing_branches=[], currentY=0):
         """ This is the main function that draws the commits taken from a walk of the repository
         (the walker object). It can optionally start with a number of existing branches and at a
-        given y-position."""
+        given y-position. It returns a tuple with the first member being a dictionary of the nodes,
+        edges, and labels to be drawn, and the second member being a list of branches at the bottom
+        of the graph (used for continuing the graph later)"""
         column = 0
         self.graph = [] #stores a list of edges which aren't finished being drawn.
         # display_list is a structure holding what should actually be drawn on the screen.
