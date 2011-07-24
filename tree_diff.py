@@ -4,7 +4,7 @@ import string
 import os
 from cgi import escape
 from flask import json, render_template
-from BeautifulSoup import UnicodeDammit
+import ggutils
 import settings
 
 DIR_SEP = os.sep
@@ -220,7 +220,7 @@ class TreeDiffer(object):
                     else:
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.CREATED,0,0,'(Binary file, created)')]}
                 else:
-                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_inserted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines())}
+                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_inserted(ggutils.force_unicode(entry_content).splitlines())}
             elif entry.kind == DiffEntry.DELETED:
                 entry_content = self.repo[entry.sha].read_raw()
                 if '\0' in entry_content:
@@ -230,7 +230,7 @@ class TreeDiffer(object):
                     else:
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.DELETED,0,0,'(Binary file, deleted)')]}
                 else:
-                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_deleted(UnicodeDammit(entry_content, smartQuotesTo=None).unicode.splitlines())}
+                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_deleted(ggutils.force_unicode(entry_content).splitlines())}
             elif entry.kind == DiffEntry.MODIFIED:
                 #Use the already calculated diff in content?
                 if hasattr(entry, 'content'):
@@ -245,8 +245,8 @@ class TreeDiffer(object):
                         else:
                             yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.MODIFIED,0,0,'(Binary file, modified)')]}
                     else:
-                        new_unicode = UnicodeDammit(new_content, smartQuotesTo=None).unicode.splitlines()
-                        old_unicode = UnicodeDammit(old_content, smartQuotesTo=None).unicode.splitlines()
+                        new_unicode = ggutils.force_unicode(new_content).splitlines()
+                        old_unicode = ggutils.force_unicode(old_content).splitlines()
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': self._context_diff(old_unicode,new_unicode)}
     
     def diff(self, old, new, parent_name=None):
@@ -314,6 +314,6 @@ class TreeDiffer(object):
         return result
     
     def compare_data(self, old_data, new_data):
-        old_data = UnicodeDammit(old_data, smartQuotesTo=None).unicode.splitlines()
-        new_data = UnicodeDammit(new_data, smartQuotesTo=None).unicode.splitlines()
+        old_data = ggutils.force_unicode(old_data).splitlines()
+        new_data = ggutils.force_unicode(new_data).splitlines()
         return self._full_diff(old_data, new_data)
