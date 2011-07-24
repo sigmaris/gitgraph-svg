@@ -1,0 +1,2 @@
+# Change this to the path to your git repository (including the final .git component) and rename this file to settings.py
+repo_path = "/Path/To/Repository/.git"
