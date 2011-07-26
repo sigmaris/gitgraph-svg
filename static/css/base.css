@@ -145,6 +145,27 @@ dl dd {
   background-repeat: repeat-x;
 }
 
+/** Images **/
+.simple_image {
+  margin: 1%;
+  text-align: center;
+}
+
+.simple_image figcaption {
+  border-bottom: 1px solid gray;
+  padding: 1px;
+  font-weight: bold;
+}
+
+.simple_image img {
+  margin: 10px;
+  background-color: #fff;
+}
+
+.simple_image .nav_link {
+  display: none;
+}
+
 /** Commits & Diffs **/
 .commit dl, .commit ul, .commit h1, .commit_msg, .filetable {
   margin: 1%;
@@ -167,7 +188,7 @@ dl dd {
   padding: 0;
 }
 
-.filetable {
+.filetable, .simple_image {
   border: 1px solid gray;
   display: inline-block;
   width: 98%;

@@ -65,21 +65,24 @@ def display_graph(ref):
 def get_blob(obj):
     """Displays the contents of a blob, either in an HTML table with numbered lines, or as binary/plaintext"""
     is_binary = '\0' in obj.data
+    if is_binary:
+        # It may be an image file so we try to detect the file type.
+        imgtype = imghdr.what(None, obj.data)
+
     if request.accept_mimetypes.best == 'text/html':
         #TODO: only return a snippet, as here, if this is an AJAX request. Otherwise return a full page?
         if is_binary:
-            resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
+            if imgtype:
+                resp = app.make_response(render_template('simple_image.html', sha=obj.sha))
+            else:
+                resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
         else:
             # We need to pass unicode to Jinja2, so convert using UnicodeDammit:
             resp = app.make_response(render_template('simple_file.html', sha=obj.sha, content=ggutils.force_unicode(obj.data).splitlines()))
     else:
         resp = app.make_response(obj.data)
         # At this point, we have some data, but no idea what mimetype it should be.
-        # It may be an image file with a certain filename - if so, the client will
-        # pass the filename as a hint to the server and we can use that.
         if is_binary:
-            #try and serve as an image
-            imgtype = imghdr.what(None, obj.data)
             resp.mimetype = {'gif':'image/gif', 'jpeg':'image/jpeg', 'png':'image/png'}.get(imgtype, 'application/octet-stream')
         else:
             resp.mimetype = 'text/plain'
