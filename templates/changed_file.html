@@ -11,11 +11,11 @@
       <td></td><td></td>
       {% if file.content == "modified" %}
       <td>
-        <img class="{{file.content}}" src="/sha/{{file.old_sha}}?filename={{file.name}}">
+        <img class="{{file.content}}" src="/sha/{{file.old_sha}}">
       </td>
       {% endif %}
       <td>
-        <img class="{{file.content}}" src="/sha/{{file.sha}}?filename={{file.name}}">
+        <img class="{{file.content}}" src="/sha/{{file.sha}}">
       </td>
     </tr>
   </tbody>

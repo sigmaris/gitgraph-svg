@@ -5,6 +5,7 @@ from werkzeug.contrib.profiler import ProfilerMiddleware
 import pygit2
 from itertools import islice
 import time
+import imghdr
 import re
 import mimetypes
 import types
@@ -63,9 +64,8 @@ def display_graph(ref):
 
 def get_blob(obj):
     """Displays the contents of a blob, either in an HTML table with numbered lines, or as binary/plaintext"""
-    desired_mimetype = request.accept_mimetypes.best_match(['text/plain','text/html'],'text/html')
     is_binary = '\0' in obj.data
-    if desired_mimetype == 'text/html':
+    if request.accept_mimetypes.best == 'text/html':
         #TODO: only return a snippet, as here, if this is an AJAX request. Otherwise return a full page?
         if is_binary:
             resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
@@ -77,14 +77,10 @@ def get_blob(obj):
         # At this point, we have some data, but no idea what mimetype it should be.
         # It may be an image file with a certain filename - if so, the client will
         # pass the filename as a hint to the server and we can use that.
-        filename_hint = request.args.get('filename',None)
-        guessed_type = None
-        if filename_hint:
-            guessed_type = mimetypes.guess_type(filename_hint)[0]
-        if guessed_type:
-            resp.mimetype = guessed_type
-        elif is_binary:
-            resp.mimetype = 'application/octet-stream'
+        if is_binary:
+            #try and serve as an image
+            imgtype = imghdr.what(None, obj.data)
+            resp.mimetype = {'gif':'image/gif', 'jpeg':'image/jpeg', 'png':'image/png'}.get(imgtype, 'application/octet-stream')
         else:
             resp.mimetype = 'text/plain'
     return resp
