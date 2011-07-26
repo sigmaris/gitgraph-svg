@@ -1,4 +1,7 @@
 <figure class="simple_image">
-  <figcaption id="filename_{{sha}}"></figcaption>
+  <figcaption id="filename_{{sha}}">{{filename}}</figcaption>
+  {% if old_sha %}
+  <img src="/sha/{{old_sha}}" />
+  {% endif %}
   <img src="/sha/{{sha}}" />
 </figure>

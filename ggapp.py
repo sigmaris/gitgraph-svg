@@ -91,7 +91,14 @@ def get_blob(obj):
 def get_blob_diff(repo, old_obj, obj):
     """Displays the differences between two versions of a blob, as HTML in a table."""
     if '\0' in obj.data or '\0' in old_obj.data:
-        resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
+        # It may be an image file so we try to detect the file type.
+        imgtype = imghdr.what(None, obj.data)
+        old_imgtype = imghdr.what(None, obj.data)
+        if imgtype and old_imgtype:
+            #They are presumably both images...
+            resp = app.make_response(render_template('simple_image.html', sha=obj.sha, old_sha=old_obj.sha))
+        else:
+            resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
     else:
         td = tree_diff.TreeDiffer(repo)
         resp = app.make_response(render_template('changed_file.html', file={'name': '', 'sha':obj.sha, 'content': td.compare_data(old_obj.data, obj.data)}))
