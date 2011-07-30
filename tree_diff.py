@@ -216,7 +216,7 @@ class TreeDiffer(object):
             for child in entry.children:
                 for result in self.commitdiff(child):
                     yield result
-        elif entry.type != 'submodule':
+        elif entry.type == pygit2.GIT_OBJ_BLOB:
             if entry.kind == DiffEntry.CREATED:
                 entry_content = self.repo[entry.sha].read_raw()
                 if '\0' in entry_content:
