@@ -14,7 +14,7 @@
   <script type="text/javascript">
   //<![CDATA[
   gitgraph = {};
-  gitgraph.initial_tree = {{initial_tree|safe}};
+  gitgraph.initial_tree = {{initial_tree|tojson(cls=td_encoder)|safe}};
   gitgraph.existing_branches = {{existing_branches|tojson|safe}};
   gitgraph.loaded_count = {{nodes|length}};
   gitgraph.current_ref = {{current_ref|tojson|safe}};

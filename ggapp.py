@@ -114,6 +114,15 @@ def get_tree_diff(repo, commit):
         to_compare = commit.parents[0]
     return td.tree_diff(to_compare.tree, commit.tree)
 
+def get_tree(tree):
+    """Gets a git (sub)tree in the JSON format required by jsTree"""
+    parent_name = request.args.get('parent_name',None)
+    td = tree_diff.TreeDiffer(repo)
+    tree = td.tree_diff(tree, tree, parent_name)
+    resp = app.make_response(json.dumps(tree, cls=tree_diff.DiffEntryEncoder))
+    resp.mimetype = 'application/json'
+    return resp
+
 def get_commit_templatedata(repo, obj):
     """Gets the required data to feed into the templates which display a single commit, including the tree changes
     in the commit, author and committer info, time and commit messages, and list of changed files. Returns a dict
@@ -126,21 +135,20 @@ def get_commit_templatedata(repo, obj):
         if entry.kind != tree_diff.DiffEntry.UNMODIFIED:
             changed_files.extend(td.commitdiff(entry))
     
-    jsontree = json.dumps(tree, cls=tree_diff.DiffEntryEncoder)
     message = ggutils.force_unicode(obj.message)
     title = ggutils.force_unicode(obj.message_short)
     author = (ggutils.force_unicode(obj.author[0]), ggutils.force_unicode(obj.author[1]))
     committer = (ggutils.force_unicode(obj.committer[0]), ggutils.force_unicode(obj.committer[1]))
     author_time = ggutils.format_commit_time(obj.author[2])
     commit_time = ggutils.format_commit_time(obj.committer[2])
-    return dict(commit=obj, message=message, title=title, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=jsontree, changed_files=changed_files)
+    return dict(commit=obj, message=message, title=title, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=tree, td_encoder=tree_diff.DiffEntryEncoder, changed_files=changed_files)
     
 def get_commit(repo, obj):
     """Displays a single commit as HTML (used to load a commit's information into the bottom pane)."""
     desired_mimetype = request.accept_mimetypes.best_match(['application/json','text/html'],'text/html')
     templatedata = get_commit_templatedata(repo, obj)
     if desired_mimetype == 'application/json':
-        resp = app.make_response(templatedata['initial_tree'])
+        resp = app.make_response(json.dumps(templatedata['initial_tree'], cls=tree_diff.DiffEntryEncoder))
         resp.mimetype = 'application/json'
         return resp
     else:
@@ -189,6 +197,8 @@ def get_sha(sha):
                 abort(400) #can't compare a blob against something else.
         elif obj.type == pygit2.GIT_OBJ_COMMIT:
             return get_commit(repo, obj)
+        elif obj.type == pygit2.GIT_OBJ_TREE:
+            return get_tree(obj)
         abort(400)
     except KeyError:
         #SHA not found in repo

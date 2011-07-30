@@ -1,7 +1,7 @@
 <div class="commit">
   <script type="text/javascript">
   //<![CDATA[
-  gitgraph.initial_tree = {{initial_tree|safe}};
+  gitgraph.initial_tree = {{initial_tree|tojson(cls=td_encoder)|safe}};
   $('#current_commit_title').text('Displaying commit "' + {{title|tojson|safe}} + '" ({{commit.sha}})')
   $('#left_tree').jstree('refresh');
   //]]>

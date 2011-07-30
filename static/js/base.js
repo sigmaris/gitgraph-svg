@@ -1,6 +1,9 @@
 function getTreeJSON(node, result) {
   if(node == -1) {
-    result(gitgraph.initial_tree)
+    result(gitgraph.initial_tree);
+  } else {
+    var sha = $(node).children('a').attr('href').substring(1);
+    $.getJSON('/sha/' + sha, $.param({'parent_name': $(node).data('full_name')}), result);
   }
 }
 

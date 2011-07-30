@@ -36,15 +36,14 @@ class DiffEntry(object):
         self.basename = git_entry.name
         self.sha = git_entry.sha
         self.kind = kind
-        self.reference = False
         try:
             git_obj = git_entry.to_object()
-            if git_obj.type == pygit2.GIT_OBJ_TREE:
-                for i in range(0, len(git_obj)):
-                    self.children.append(DiffEntry(kind, git_obj[i], parent_name=self.name))
+            self.type = git_obj.type
+        #        for i in range(0, len(git_obj)):
+        #            self.children.append(DiffEntry(kind, git_obj[i], parent_name=self.name))
         except KeyError:
             #Probably a reference to other project
-            self.reference = True
+            self.type = 'submodule'
     
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -69,7 +68,12 @@ class Modified(DiffEntry):
         self.sha = new_entry.sha
         self.old_sha = old_entry.sha
         self.kind = DiffEntry.MODIFIED
-        self.reference = False
+        try:
+            git_obj = new_entry.to_object()
+            self.type = git_obj.type
+        except KeyError:
+            #Probably a reference to other project
+            self.type = 'submodule'
 
     def __str__(self):
         return "<tree_diff.DiffEntry: {0} {1} sha:{2} old_sha:{3}>".format(self.basename, self.kind, self.sha, self.old_sha)
@@ -110,22 +114,24 @@ class DiffEntryEncoder(json.JSONEncoder):
             if hasattr(o, 'old_sha') and o.old_sha:
                 json_dict['metadata']['old_sha'] = o.old_sha
             
-            if o.children:
-                json_dict['children'] = o.children
+            if o.type == pygit2.GIT_OBJ_TREE:
+                if o.children:
+                    json_dict['children'] = o.children
                 typeclass = 'directory'
                 if cls != 'unmodified':
                     json_dict['state'] = 'open'
-            else:
+                else:
+                    json_dict['state'] = 'closed'
+            elif o.type == pygit2.GIT_OBJ_BLOB:
                 json_dict['data']['icon'] = '/static/img/blankpage.png'
                 typeclass = 'file'
+            else:
+                typeclass = 'reference'
             
             if o.kind == DiffEntry.MODIFIED:
                 json_dict['metadata']['old_name'] = o.old_name
                 json_dict['metadata']['old_sha'] = o.old_sha
-            
-            if o.reference:
-                typeclass = 'reference'
-            
+                        
             json_dict['data']['attr']['class'] = '{0} {1}'.format(cls, typeclass)
             
             return json_dict
@@ -210,7 +216,7 @@ class TreeDiffer(object):
             for child in entry.children:
                 for result in self.commitdiff(child):
                     yield result
-        elif not entry.reference:
+        elif entry.type != 'submodule':
             if entry.kind == DiffEntry.CREATED:
                 entry_content = self.repo[entry.sha].read_raw()
                 if '\0' in entry_content:

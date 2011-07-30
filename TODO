@@ -1,4 +1,3 @@
-* Handle changed images better - stop using filetable
 * Handle diffs with two branches for merges
 * When displaying a commit, scroll the tree to show the changed files
 * Add preferences dialog of some kind
