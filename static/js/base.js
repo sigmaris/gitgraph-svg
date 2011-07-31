@@ -1,3 +1,29 @@
+// http://www.quirksmode.org/js/cookies.html
+function setCookie(name,value,days) {
+  if (days) {
+    var date = new Date();
+    date.setTime(date.getTime()+(days*24*60*60*1000));
+    var expires = "; expires="+date.toGMTString();
+  }
+  else var expires = "";
+  document.cookie = name+"="+value+expires+"; path=/";
+}
+
+function getCookie(name) {
+  var nameEQ = name + "=";
+  var ca = document.cookie.split(';');
+  for(var i=0;i < ca.length;i++) {
+    var c = ca[i];
+    while (c.charAt(0)==' ') c = c.substring(1,c.length);
+    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+  }
+  return null;
+}
+
+function eraseCookie(name) {
+  setCookie(name,"",-1);
+}
+
 function getTreeJSON(node, result) {
   if(node == -1) {
     result(gitgraph.initial_tree);
@@ -7,18 +33,60 @@ function getTreeJSON(node, result) {
   }
 }
 
+function setHorizDivider(topPercent) {
+  var bottomPercent = 1 - topPercent;
+  bottomPercent -= 0.004; //allow for divider width
+  $('#top_graph').css('height',100*topPercent+'%');
+  $('#bottom_pane').css('height',100*bottomPercent+'%');
+  $('#mid_divider').css('top','');
+}
+
+function setVertDivider(leftPercent) {
+  var rightPercent = 1 - leftPercent;
+  rightPercent -= 0.003; //allow for divider width
+  $('#left_tree').css('width',100*leftPercent+'%');
+  $('#right_container').css('width',100*rightPercent+'%');
+  $('#left_divider').css('left','');
+}
+
+function toggleTopExpansion(event) {
+  if(!gitgraph.top_expanded) {
+    gitgraph.top_expanded = true;
+    gitgraph.old_top_height = $('#top_graph').css('height');
+    gitgraph.old_bottom_height = $('#bottom_pane').css('height');
+    $('#top_graph').animate({height: '99.6%'});
+    $('#bottom_pane').animate({height: '0%'});
+  } else {
+    gitgraph.top_expanded = false;
+    $('#top_graph').animate({height: gitgraph.old_top_height});
+    $('#bottom_pane').animate({height: gitgraph.old_bottom_height});
+  }
+}
+
+function toggleBottomExpansion(event) {
+  if(!gitgraph.bottom_expanded) {
+    gitgraph.bottom_expanded = true;
+    gitgraph.old_top_height = $('#top_graph').css('height');
+    gitgraph.old_bottom_height = $('#bottom_pane').css('height');
+    $('#top_graph').animate({height: '0%'});
+    $('#bottom_pane').animate({height: '99.6%'});
+  } else {
+    gitgraph.bottom_expanded = false;
+    $('#top_graph').animate({height: gitgraph.old_top_height});
+    $('#bottom_pane').animate({height: gitgraph.old_bottom_height});
+  }
+}
+
 function setupDraggables() {
   $('#left_divider').draggable({
     axis: 'x',
     containment: 'parent',
     stop: function(event, ui) {
       var docWidth = $(document).width();
-      var leftPercent = ui.offset.left / docWidth;
-      var rightPercent = 1 - leftPercent;
-      rightPercent -= 0.003; //allow for divider width
-      $('#left_tree').css('width',100*leftPercent+'%');
-      $('#right_container').css('width',100*rightPercent+'%');
-      $('#left_divider').css('left','');
+      //Constrain to 2% away from either edge
+      var leftPercent = Math.min(Math.max(ui.offset.left / docWidth, 0.02),0.98);
+      setCookie('leftPercent',leftPercent,30);
+      setVertDivider(leftPercent);
     }
   });
   
@@ -26,16 +94,33 @@ function setupDraggables() {
     axis: 'y',
     containment: 'parent',
     stop: function(event, ui) {
+      gitgraph.top_expanded = false;
+      gitgraph.bottom_expanded = false;
       var docHeight = $('#wrapper').height();
-      var topPercent = (ui.offset.top - $('#toolbar').height()) / docHeight;
-      var bottomPercent = 1 - topPercent;
-      bottomPercent -= 0.004; //allow for divider width
-      $('#top_graph').css('height',100*topPercent+'%');
-      $('#bottom_pane').css('height',100*bottomPercent+'%');
-      $('#mid_divider').css('top','');
+      //Constrain to 2% away from either edge
+      var topPercent = Math.min(Math.max((ui.offset.top - $('#toolbar').height()) / docHeight,0.02),0.98);
+      setCookie('topPercent',topPercent,30);
+      setHorizDivider(topPercent);
     }
   });
   
+  //Set the initial position from stored prefs
+  var topPercent = getCookie('topPercent');
+  if(topPercent) {
+    setHorizDivider(topPercent);
+  }
+  var leftPercent = getCookie('leftPercent');
+  if(leftPercent) {
+    setVertDivider(leftPercent);
+  }
+  
+  //Expand the top graph on double-click
+  $('#top_graph').dblclick(toggleTopExpansion);
+  
+  //Expand the bottom pane on double-click
+  $('#bottom_pane').dblclick(toggleBottomExpansion);
+  
+  //This doesn't work at the moment - why?
   $('#top_graph th').resizable({
     handles: 'all',
     maxHeight: 17,

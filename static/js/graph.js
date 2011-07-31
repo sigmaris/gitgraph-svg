@@ -14,6 +14,9 @@ function load_commit(sha) {
     jQ('#bottom_pane').load('/sha/' + sha, '', function(responseText, textStatus, jqXHR) {
       if(textStatus == 'success' || textStatus == 'notmodified') {
         highlight(sha);
+        if(gitgraph.top_expanded) {
+          toggleTopExpansion();
+        }
       }
     });
   }
