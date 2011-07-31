@@ -19,7 +19,7 @@
     <dd>{{commit.tree.sha}}</dd>
     {% for parent in commit.parents %}
     <dt>Parent</dt>
-    <dd>{{parent.sha}}</dd>
+    <dd><a class="label" id="parent_{{parent.sha}}">{{parent.sha}}</a></dd>
     {% endfor %}
   </dl>
   <pre class="commit_msg">{{message}}</pre>
