@@ -54,12 +54,12 @@ function toggleTopExpansion(event) {
     gitgraph.top_expanded = true;
     gitgraph.old_top_height = $('#top_graph').css('height');
     gitgraph.old_bottom_height = $('#bottom_pane').css('height');
-    $('#top_graph').animate({height: '99.6%'});
-    $('#bottom_pane').animate({height: '0%'});
+    $('#top_graph').animate({height: '99.6%'}, 'fast');
+    $('#bottom_pane').animate({height: '0%'}, 'fast');
   } else {
     gitgraph.top_expanded = false;
-    $('#top_graph').animate({height: gitgraph.old_top_height});
-    $('#bottom_pane').animate({height: gitgraph.old_bottom_height});
+    $('#top_graph').animate({height: gitgraph.old_top_height}, 'fast');
+    $('#bottom_pane').animate({height: gitgraph.old_bottom_height}, 'fast');
   }
 }
 
@@ -68,12 +68,12 @@ function toggleBottomExpansion(event) {
     gitgraph.bottom_expanded = true;
     gitgraph.old_top_height = $('#top_graph').css('height');
     gitgraph.old_bottom_height = $('#bottom_pane').css('height');
-    $('#top_graph').animate({height: '0%'});
-    $('#bottom_pane').animate({height: '99.6%'});
+    $('#top_graph').animate({height: '0%'}, 'fast');
+    $('#bottom_pane').animate({height: '99.6%'}, 'fast');
   } else {
     gitgraph.bottom_expanded = false;
-    $('#top_graph').animate({height: gitgraph.old_top_height});
-    $('#bottom_pane').animate({height: gitgraph.old_bottom_height});
+    $('#top_graph').animate({height: gitgraph.old_top_height}, 'fast');
+    $('#bottom_pane').animate({height: gitgraph.old_bottom_height}, 'fast');
   }
 }
 
