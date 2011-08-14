@@ -118,7 +118,7 @@ class DiffEntryEncoder(json.JSONEncoder):
                 if o.children:
                     json_dict['children'] = o.children
                 typeclass = 'directory'
-                if cls != 'unmodified':
+                if cls == 'modified':
                     json_dict['state'] = 'open'
                 else:
                     json_dict['state'] = 'closed'
