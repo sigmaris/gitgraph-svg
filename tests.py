@@ -4,8 +4,9 @@ import subprocess
 import os
 import shutil
 import pygit2
-import tree_diff
 import pprint
+
+import tree_diff
 
 lorem1 = """Lorem ipsum dolor sit amet, consectetur adipisicing elit,
 sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
@@ -182,6 +183,49 @@ class TreeDiffTest(unittest.TestCase):
         self.assertTrue(self._content_contains_lines(content_list,removed_lines,tree_diff.DiffEntry.DELETED))
         # Assert that none of the unmodified lines show up as deleted
         self.assertFalse(self._content_contains_lines(content_list,lorem2_lines,tree_diff.DiffEntry.DELETED,True))
+
+    def test_add_lines(self):
+        """Add some lines in a file and test that they show up in the commit diff"""
+        with open('lorem2.txt','w') as f:
+            f.write(lorem2)
+        subprocess.call(['git','add','lorem2.txt'])
+        subprocess.call(['git','commit','-m', 'lorem2'])
+        #record sha before modification
+        prev_sha = self._get_last_commit()
+        lorem1_lines = lorem1.splitlines()
+        lorem2_lines = lorem2.splitlines()
+        inserted_lines = []
+        indexes_to_insert = [0,3,5,8,10,11]
+        for n in indexes_to_insert:
+            line = lorem1_lines[n % len(lorem1_lines)]
+            inserted_lines.append(line)
+            lorem2_lines.insert(n, line)
+        #Write the content again, with certain lines inserted
+        with open('lorem2.txt','w') as f:
+            f.write('\n'.join(lorem2_lines))
+        subprocess.call(['git','add','lorem2.txt'])
+        subprocess.call(['git','commit','-m', 'lorem2 modified'])
+        #Record the SHA after modification
+        commit_sha = self._get_last_commit()
+        repo = pygit2.Repository(os.path.join(self.repo_path,'.git'))
+        td = tree_diff.TreeDiffer(repo)
+        old = repo[prev_sha]
+        new = repo[commit_sha]
+        diff = td.tree_diff(old.tree, new.tree)
+        self.assertTrue(self._diff_contains(diff,tree_diff.DiffEntry.MODIFIED,'lorem2.txt'))
+        diff_entry = self._diff_entry_named(diff, 'lorem2.txt')
+        self.assertEqual(diff_entry.basename, 'lorem2.txt')
+        self.assertEqual(diff_entry.kind, tree_diff.DiffEntry.MODIFIED)
+        commit_diff = list(td.commitdiff(diff_entry))
+        self.assertEqual(len(commit_diff),1)
+        commit_diff_entry = commit_diff[0]
+        self.assertEqual(commit_diff_entry['name'], 'lorem2.txt')
+        # we need to get a list from the generator output:
+        content_list = list(commit_diff_entry['content'])
+        # Assert that the inserted lines show up in the diff
+        self.assertTrue(self._content_contains_lines(content_list,inserted_lines,tree_diff.DiffEntry.CREATED))
+        # Assert that none of the unmodified lines show up as inserted
+        self.assertFalse(self._content_contains_lines(content_list,lorem2.splitlines(),tree_diff.DiffEntry.CREATED,True))
 
 if __name__ == '__main__':
     unittest.main()
