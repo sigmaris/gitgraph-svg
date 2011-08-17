@@ -123,6 +123,7 @@ dl dd {
   margin: 0;
   padding: 0;
   border: 0;
+  border-spacing: 0;
 }
 
 #top_graph thead th {
