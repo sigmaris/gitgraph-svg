@@ -1,7 +1,7 @@
 <figure class="simple_image">
   <figcaption id="filename_{{sha}}">{{filename}}</figcaption>
   {% if old_sha %}
-  <img src="/sha/{{old_sha}}" />
+  <img src="{{ url_for('get_sha', sha=old_sha) }}" />
   {% endif %}
-  <img src="/sha/{{sha}}" />
+  <img src="{{ url_for('get_sha', sha=sha) }}" />
 </figure>
