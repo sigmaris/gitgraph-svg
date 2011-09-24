@@ -44,7 +44,7 @@ def display_graph_from_ref(ref):
     #Resolve symbolic refs
     if headref.type == pygit2.GIT_REF_SYMBOLIC:
         headref = headref.resolve()
-    head_obj = repo[headref.sha]
+    head_obj = repo[headref.oid]
     
     #Fully resolve tags..
     while head_obj.type == pygit2.GIT_OBJ_TAG:
@@ -73,8 +73,8 @@ def display_graph(head_obj, ref=None):
     if search_commit:
         # Try to find commit in current branch
         stop = -1
-        for (index, commit) in enumerate(islice(repo.walk(head_obj.sha, pygit2.GIT_SORT_TIME), offset, None)):
-            if commit.sha == search_commit:
+        for (index, commit) in enumerate(islice(repo.walk(head_obj.oid, pygit2.GIT_SORT_TIME), offset, None)):
+            if commit.hex == search_commit:
                 stop = index + offset + 11
                 break
         if stop == -1:
@@ -97,7 +97,7 @@ def display_graph(head_obj, ref=None):
     else:
         stop = offset + 100
     
-    walker = islice(repo.walk(head_obj.sha, pygit2.GIT_SORT_TIME), offset, stop)
+    walker = islice(repo.walk(head_obj.oid, pygit2.GIT_SORT_TIME), offset, stop)
     (display_list, existing_branches) = grapher.draw_commits(walker, branches, offset)
 
     if request.is_xhr:
@@ -123,12 +123,12 @@ def get_blob(obj):
         #TODO: only return a snippet, as here, if this is an AJAX request. Otherwise return a full page?
         if is_binary:
             if imgtype:
-                resp = app.make_response(render_template('simple_image.html', sha=obj.sha))
+                resp = app.make_response(render_template('simple_image.html', sha=obj.hex))
             else:
                 resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
         else:
             # We need to pass unicode to Jinja2, so convert using UnicodeDammit:
-            resp = app.make_response(render_template('simple_file.html', sha=obj.sha, content=ggutils.force_unicode(obj.data).splitlines()))
+            resp = app.make_response(render_template('simple_file.html', sha=obj.hex, content=ggutils.force_unicode(obj.data).splitlines()))
     else:
         resp = app.make_response(obj.data)
         # At this point, we have some data, but no idea what mimetype it should be.
@@ -146,12 +146,12 @@ def get_blob_diff(repo, old_obj, obj):
         old_imgtype = imghdr.what(None, obj.data)
         if imgtype and old_imgtype:
             #They are presumably both images...
-            resp = app.make_response(render_template('simple_image.html', sha=obj.sha, old_sha=old_obj.sha))
+            resp = app.make_response(render_template('simple_image.html', sha=obj.hex, old_sha=old_obj.hex))
         else:
             resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
     else:
         td = tree_diff.TreeDiffer(repo)
-        resp = app.make_response(render_template('changed_file.html', file={'name': '', 'sha':obj.sha, 'content': td.compare_data(old_obj.data, obj.data)}))
+        resp = app.make_response(render_template('changed_file.html', file={'name': '', 'sha':obj.hex, 'content': td.compare_data(old_obj.data, obj.data)}))
     return resp
 
 def get_tree_diff(repo, commit):
@@ -186,12 +186,11 @@ def get_commit_templatedata(repo, obj):
             changed_files.extend(td.commitdiff(entry))
     
     message = ggutils.force_unicode(obj.message)
-    title = ggutils.force_unicode(obj.message_short)
     author = (ggutils.force_unicode(obj.author[0]), ggutils.force_unicode(obj.author[1]))
     committer = (ggutils.force_unicode(obj.committer[0]), ggutils.force_unicode(obj.committer[1]))
     author_time = ggutils.format_commit_time(obj.author[2])
     commit_time = ggutils.format_commit_time(obj.committer[2])
-    return dict(commit=obj, message=message, title=title, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=tree, td_encoder=tree_diff.DiffEntryEncoder, changed_files=changed_files)
+    return dict(commit=obj, message=message, title=message, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=tree, td_encoder=tree_diff.DiffEntryEncoder, changed_files=changed_files)
     
 def get_commit(repo, obj):
     """Displays a single commit as HTML or JSON (used to load a commit's information into the bottom pane)."""

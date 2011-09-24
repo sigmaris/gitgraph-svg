@@ -2,7 +2,7 @@
   <script type="text/javascript">
   //<![CDATA[
   gitgraph.initial_tree = {{initial_tree|tojson(cls=td_encoder)|safe}};
-  $('#find_commit').val({{commit.sha|tojson|safe}});
+  $('#find_commit').val({{commit.hex|tojson|safe}});
   $('#left_tree').jstree('refresh');
   //]]>
   </script>
@@ -14,12 +14,12 @@
     <dt>Committer</dt>
     <dd>{{committer[0]}} &lt;<a href="mailto:{{committer[1]}}">{{committer[1]}}</a>&gt;<br />{{commit_time}}</dd>
     <dt>Commit</dt>
-    <dd>{{commit.sha}}</dd>
+    <dd>{{commit.hex}}</dd>
     <dt>Tree</dt>
-    <dd>{{commit.tree.sha}}</dd>
+    <dd>{{commit.tree.hex}}</dd>
     {% for parent in commit.parents %}
     <dt>Parent</dt>
-    <dd><a class="label" id="parent_{{parent.sha}}">{{parent.sha}}</a></dd>
+    <dd><a class="label" id="parent_{{parent.hex}}">{{parent.hex}}</a></dd>
     {% endfor %}
   </dl>
   <pre class="commit_msg">{{message}}</pre>

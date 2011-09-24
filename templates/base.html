@@ -18,7 +18,7 @@
   gitgraph.existing_branches = {{existing_branches|tojson|safe}};
   gitgraph.loaded_count = {{nodes|length}};
   gitgraph.current_ref = {{current_ref|tojson|safe}};
-  gitgraph.current_head = {{commit.sha|tojson|safe}};
+  gitgraph.current_head = {{commit.hex|tojson|safe}};
   gitgraph.base_url = {{ url_for('display_page')|tojson|safe }};
   //]]>
   </script>
@@ -29,7 +29,7 @@
   <div id="toolbar">
     {% include "ref_select.html" %}
     <div id="current_commit_title">
-      SHA ID: <input type="text" id="find_commit" value="{{commit.sha}}">
+      SHA ID: <input type="text" id="find_commit" value="{{commit.hex}}">
       <input type="button" id="find_commit_button" value="Find">
     </div>
   </div>

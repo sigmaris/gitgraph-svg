@@ -18,15 +18,15 @@ class Grapher(object):
     def place_commit(self, commit, y):
         try:
             #Find which branch this commit should go on
-            pos = self.branches.index(commit.sha)
+            pos = self.branches.index(commit.hex)
         except ValueError:
             #this is the first commit - create a branch
             pos = len(self.branches)
-            self.branches.append(commit.sha)
+            self.branches.append(commit.hex)
             if self.graph and self.display_list:
                 if commit.parents:
-                    self.graph.append(self.new_edge(pos, y, commit.parents[0].sha))
-                self.display_list['nodes'].append(self.new_node(pos, y, commit.sha, [x.sha for x in commit.parents]))
+                    self.graph.append(self.new_edge(pos, y, commit.parents[0].hex))
+                self.display_list['nodes'].append(self.new_node(pos, y, commit.hex, [x.hex for x in commit.parents]))
         return pos
 
     def finish_edges(self, sha, x, y):
@@ -46,30 +46,30 @@ class Grapher(object):
         append = False
         delete = True
         for parent in parents:
-            if parent.sha not in self.branches:
+            if parent.hex not in self.branches:
                 delete = False
                 if not append:
                     #place first parent on this branch
-                    self.branches[x] = parent.sha
+                    self.branches[x] = parent.hex
                     if self.graph != None:
-                        self.graph.append(self.new_edge(x, y, parent.sha))
+                        self.graph.append(self.new_edge(x, y, parent.hex))
                     append = True
                 else:
                     #here we would draw a line to new branch
                     try:
                         insertat = self.branches.index('')
-                        self.branches[insertat] = parent.sha
+                        self.branches[insertat] = parent.hex
                     except ValueError:
                         insertat = len(self.branches)
-                        self.branches.append(parent.sha)
+                        self.branches.append(parent.hex)
                     if self.graph != None:
-                        edge = self.new_edge(x, y, parent.sha, override_color=insertat)
+                        edge = self.new_edge(x, y, parent.hex, override_color=insertat)
                         edge['d'].append({'type': 'l', 'x': insertat-x, 'y': 0.5})
                         self.graph.append(edge)
             elif self.display_list != None:
                 #here we draw lines to other existing branches.
-                otherbranch = self.branches.index(parent.sha)
-                edge = self.new_edge(x, y, parent.sha, override_color=otherbranch)
+                otherbranch = self.branches.index(parent.hex)
+                edge = self.new_edge(x, y, parent.hex, override_color=otherbranch)
                 edge['d'].append({'type': 'l', 'x': otherbranch-x, 'y': 0.5})
                 self.display_list['edges'].append(edge)
         return delete
@@ -99,7 +99,7 @@ class Grapher(object):
             pos = self.place_commit(commit, currentY)
             
             # Do any edges need finishing off?
-            self.finish_edges(commit.sha, pos, currentY)
+            self.finish_edges(commit.hex, pos, currentY)
             
             #The delete flag determines whether to mark this branch as deleted
             if commit.parents:
@@ -122,11 +122,11 @@ class Grapher(object):
                 self.branches[pos] = ''
             
             # Create a node representing this commit and the message, author and time labels
-            self.display_list['nodes'].append(self.new_node(pos, currentY, commit.sha, [x.sha for x in commit.parents]))
-            label_text = ggutils.force_unicode(commit.message_short)
-            self.display_list['labels'].append({'x': textX, 'y': currentY, 'content': label_text, 'sha': commit.sha})
-            self.display_list['authors'].append({'x': 0, 'y': currentY, 'content': ggutils.force_unicode(commit.author[0]), 'sha': commit.sha})
-            self.display_list['dates'].append({'x': 0, 'y': currentY, 'content': ggutils.format_commit_time(commit.commit_time), 'sha': commit.sha})
+            self.display_list['nodes'].append(self.new_node(pos, currentY, commit.hex, [x.hex for x in commit.parents]))
+            label_text = ggutils.force_unicode(commit.message)
+            self.display_list['labels'].append({'x': textX, 'y': currentY, 'content': label_text, 'sha': commit.hex})
+            self.display_list['authors'].append({'x': 0, 'y': currentY, 'content': ggutils.force_unicode(commit.author[0]), 'sha': commit.hex})
+            self.display_list['dates'].append({'x': 0, 'y': currentY, 'content': ggutils.format_commit_time(commit.commit_time), 'sha': commit.hex})
             currentY += 1
         for incomplete in self.graph:
             incomplete['d'].append({'type': 'V', 'y': currentY})

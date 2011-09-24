@@ -34,7 +34,7 @@ class DiffEntry(object):
         else:
             self.name = git_entry.name
         self.basename = git_entry.name
-        self.sha = git_entry.sha
+        self.sha = git_entry.hex
         self.kind = kind
         try:
             git_obj = git_entry.to_object()
@@ -65,8 +65,8 @@ class Modified(DiffEntry):
             self.old_name = old_entry.name
         self.basename = new_entry.name
         self.old_basename = old_entry.name
-        self.sha = new_entry.sha
-        self.old_sha = old_entry.sha
+        self.sha = new_entry.hex
+        self.old_sha = old_entry.hex
         self.kind = DiffEntry.MODIFIED
         try:
             git_obj = new_entry.to_object()
@@ -294,7 +294,7 @@ class TreeDiffer(object):
             #does entry exist in old tree?
             if new[i].name in old:
                 old_entry = old[new[i].name]
-                if old_entry.sha != new[i].sha:
+                if old_entry.oid != new[i].oid:
                     #they have changed.
                     entries.append(self.diff(old_entry, new[i], parent_name))
                 else:

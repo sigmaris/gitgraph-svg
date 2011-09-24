@@ -105,8 +105,8 @@ class TreeDiffTest(unittest.TestCase):
         commit_sha = self._get_last_commit()
         repo = pygit2.Repository(os.path.join(self.repo_path,'.git'))
         td = tree_diff.TreeDiffer(repo)
-        old = repo[prev_sha]
-        new = repo[commit_sha]
+        old = repo[unicode(prev_sha)]
+        new = repo[unicode(commit_sha)]
         diff = td.tree_diff(old.tree, new.tree)
         self.assertTrue(self._diff_contains(diff,tree_diff.DiffEntry.CREATED,'lorem1.txt'))
         diff_entry = self._diff_entry_named(diff, 'lorem1.txt')
@@ -130,8 +130,8 @@ class TreeDiffTest(unittest.TestCase):
         commit_sha = self._get_last_commit()
         repo = pygit2.Repository(os.path.join(self.repo_path,'.git'))
         td = tree_diff.TreeDiffer(repo)
-        old = repo[prev_sha]
-        new = repo[commit_sha]
+        old = repo[unicode(prev_sha)]
+        new = repo[unicode(commit_sha)]
         diff = td.tree_diff(old.tree, new.tree)
         self.assertTrue(self._diff_contains(diff,tree_diff.DiffEntry.DELETED,'lorem2.txt'))
         diff_entry = self._diff_entry_named(diff, 'lorem2.txt')
@@ -166,8 +166,8 @@ class TreeDiffTest(unittest.TestCase):
         commit_sha = self._get_last_commit()
         repo = pygit2.Repository(os.path.join(self.repo_path,'.git'))
         td = tree_diff.TreeDiffer(repo)
-        old = repo[prev_sha]
-        new = repo[commit_sha]
+        old = repo[unicode(prev_sha)]
+        new = repo[unicode(commit_sha)]
         diff = td.tree_diff(old.tree, new.tree)
         self.assertTrue(self._diff_contains(diff,tree_diff.DiffEntry.MODIFIED,'lorem2.txt'))
         diff_entry = self._diff_entry_named(diff, 'lorem2.txt')
@@ -209,8 +209,8 @@ class TreeDiffTest(unittest.TestCase):
         commit_sha = self._get_last_commit()
         repo = pygit2.Repository(os.path.join(self.repo_path,'.git'))
         td = tree_diff.TreeDiffer(repo)
-        old = repo[prev_sha]
-        new = repo[commit_sha]
+        old = repo[unicode(prev_sha)]
+        new = repo[unicode(commit_sha)]
         diff = td.tree_diff(old.tree, new.tree)
         self.assertTrue(self._diff_contains(diff,tree_diff.DiffEntry.MODIFIED,'lorem2.txt'))
         diff_entry = self._diff_entry_named(diff, 'lorem2.txt')
