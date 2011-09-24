@@ -140,6 +140,15 @@ $(document).ajaxStop(function() {
   }
 });
 
+function getHeadGraphURL() {
+  if(gitgraph.current_ref) {
+    return '/' + gitgraph.current_ref;
+  } else if(gitgraph.current_head) {
+    return '/graph/' + gitgraph.current_head;
+  } else {
+    return '/';
+  }
+}
 
 $(document).ready(function() {
   
@@ -148,7 +157,13 @@ $(document).ready(function() {
   });
   
   $(document).ajaxError(function(event, jqXHR, settings, thrownError) {
-    alert("There was an error fetching data from " + settings.url + ":\n" + thrownError);
+    switch(jqXHR.status) {
+      case 404:
+        alert("The requested commit, tree or object could not be found.");
+        break;
+      default:
+        alert("There was an error fetching data from " + settings.url + ":\n" + thrownError);
+    }
   });
   
   $('#left_tree').jstree({
@@ -192,7 +207,16 @@ $(document).ready(function() {
   setupDraggables();
   
   $('#reveal').click(function(event) {
-    $('#reveal_ajax').load('/'+gitgraph.current_ref, $.param({offset: gitgraph.loaded_count, branches: gitgraph.existing_branches}, true));
+    $('#reveal_ajax').load(getHeadGraphURL(), $.param({offset: gitgraph.loaded_count, branches: gitgraph.existing_branches}, true));
+  });
+  
+  $('#find_commit_button').click(function(event) {
+    var inputSHA = $('#find_commit').val();
+    if(/^[a-fA-F0-9]{40}$/.test(inputSHA)) {
+      searchForCommit(inputSHA);
+    } else {
+      alert("That isn't a valid SHA ID.");
+    }
   });
 
   $('#ref_select').change(function() {

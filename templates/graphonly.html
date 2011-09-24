@@ -11,11 +11,28 @@
   <text id="date_{{label.sha}}" class="label" x="{{label.x * 20}}" y="{{label.y * 20 + 3}}" font-size="14">{{label.content}}</text>
   {% endfor %}
 </svg>
+{% if found_commit %}
+<div id="ajax_commit" style="display:none;">
+{% include "commit.html" %}
+</div>
+{% endif %}
 <script type="text/javascript">
 //<![CDATA[
   gitgraph.existing_branches = {{existing_branches|tojson|safe}};
   gitgraph.current_ref = {{current_ref|tojson|safe}};
-  gitgraph.loaded_count += {{nodes|length}};
+  {% if refresh %}
+    gitgraph.loaded_count = {{nodes|length}};
+    gitgraph.current_head = {{nodes.0.id|tojson|safe}};
+    $('#graph_svg_group').empty();
+    $('#authors_svg_group').empty();
+    $('#dates_svg_group').empty();
+  {% else %}
+    gitgraph.loaded_count += {{nodes|length}};
+  {% endif %}
+  {% if found_commit %}
+    $('#bottom_pane').empty();
+    $('#bottom_pane').append($('#ajax_commit').children());
+  {% endif %}
 
   //Append to existing graph
   $('#graph_svg_group').append($('#ajax_graph_svg').children());
@@ -25,9 +42,15 @@
   $('#graph_svg').attr('height',(gitgraph.loaded_count * 20) + 'px');
   $('#authors_svg').attr('height',(gitgraph.loaded_count * 20) + 'px');
   $('#dates_svg').attr('height',(gitgraph.loaded_count * 20) + 'px');
-
+  
   $('#ajax_graph_svg').remove();
   $('#ajax_authors_svg').remove();
   $('#ajax_dates_svg').remove();
+  
+  {% if found_commit %}
+    $('#ajax_commit').remove();
+    scrollToCommit({{found_commit|tojson|safe}});
+    highlight({{found_commit|tojson|safe}});
+  {% endif %}
 //]]>
 </script>

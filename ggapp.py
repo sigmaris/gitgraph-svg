@@ -34,14 +34,12 @@ app.url_map.converters['ref'] = RefConverter
 @app.route('/')
 @app.route('/HEAD')
 def display_page():
-    return display_graph('HEAD')
+    return display_graph_from_ref('HEAD')
 
 @app.route('/<ref:ref>')
-def display_graph(ref):
-    """Displays the main graph view, starting at a certain ref (a branch, tag or remote branch)"""
-    offset = request.args.get('offset',0,type=int)
+def display_graph_from_ref(ref):
+    """Displays the main graph view, starting at a certain ref (a branch, tag or remote branch)."""
     headref = repo.lookup_reference(ref)
-    grapher = graph.Grapher()
     
     #Resolve symbolic refs
     if headref.type == pygit2.GIT_REF_SYMBOLIC:
@@ -52,11 +50,63 @@ def display_graph(ref):
     while head_obj.type == pygit2.GIT_OBJ_TAG:
         head_obj = head_obj.target
     
-    walker = islice(repo.walk(head_obj.sha, pygit2.GIT_SORT_TIME), offset, offset+100)
+    return display_graph(head_obj, ref)
+
+@app.route('/graph/<sha:head>')
+def display_graph_from_commit(head):
+    """Displays the main graph view starting from a certain commit."""
+    try:
+        head_obj = repo[head]
+        return display_graph(head_obj)
+    except KeyError:
+        abort(404)
+
+def display_graph(head_obj, ref=None):
+    """Displays the main graph view, starting at a certain commit object. ref is an optional head or tag to label as 'current'.
+    Optionally searches for a certain commit and displays graph from head up to that commit + 10 previous."""
+    offset = request.args.get('offset',0,type=int)
     branches = request.args.getlist('branches')
+    search_commit = request.args.get('search_commit',None)
+    switch_branch = False
+    grapher = graph.Grapher()
+    
+    if search_commit:
+        # Try to find commit in current branch
+        stop = -1
+        for (index, commit) in enumerate(islice(repo.walk(head_obj.sha, pygit2.GIT_SORT_TIME), offset, None)):
+            if commit.sha == search_commit:
+                stop = index + offset + 11
+                break
+        if stop == -1:
+            #at this point, it was not found in the current branch..
+            try:
+                # try switching to display the graph starting at the searched-for commit
+                head_obj = repo[search_commit]
+                if head_obj.type != pygit2.GIT_OBJ_COMMIT:
+                    abort(400)
+                else:
+                    # Switch branch to start from found commit, reset other things
+                    switch_branch = True
+                    ref = None
+                    branches = []
+                    offset = 0
+                    stop = 100
+            except KeyError:
+                # Commit is not even in the repo, return 404.
+                abort(404)
+    else:
+        stop = offset + 100
+    
+    walker = islice(repo.walk(head_obj.sha, pygit2.GIT_SORT_TIME), offset, stop)
     (display_list, existing_branches) = grapher.draw_commits(walker, branches, offset)
+
     if request.is_xhr:
-        return render_template('graphonly.html', existing_branches=existing_branches, current_ref=ref, **display_list)
+        if search_commit:
+            # Need to load data for the searched/found commit as well
+            extra_template_data = dict(display_list.items() + get_commit_templatedata(repo, repo[search_commit]).items())
+        else:
+            extra_template_data = display_list
+        return render_template('graphonly.html', existing_branches=existing_branches, current_ref=ref, refresh=switch_branch, found_commit=search_commit, **extra_template_data)
     else:
         (tags, branches, remotes) = get_all_refs(repo)
         extra_template_data = dict(display_list.items() + get_commit_templatedata(repo, head_obj).items())
@@ -144,7 +194,7 @@ def get_commit_templatedata(repo, obj):
     return dict(commit=obj, message=message, title=title, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=tree, td_encoder=tree_diff.DiffEntryEncoder, changed_files=changed_files)
     
 def get_commit(repo, obj):
-    """Displays a single commit as HTML (used to load a commit's information into the bottom pane)."""
+    """Displays a single commit as HTML or JSON (used to load a commit's information into the bottom pane)."""
     desired_mimetype = request.accept_mimetypes.best_match(['application/json','text/html'],'text/html')
     templatedata = get_commit_templatedata(repo, obj)
     if desired_mimetype == 'application/json':

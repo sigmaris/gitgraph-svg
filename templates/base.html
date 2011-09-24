@@ -28,7 +28,10 @@
 <body>
   <div id="toolbar">
     {% include "ref_select.html" %}
-    <div id="current_commit_title">Displaying commit "{{title}}" ({{commit.sha}})</div>
+    <div id="current_commit_title">
+      SHA ID: <input type="text" id="find_commit" value="{{commit.sha}}">
+      <input type="button" id="find_commit_button" value="Find">
+    </div>
   </div>
   <div id="wrapper">
     <div class="loader"></div>

@@ -28,12 +28,12 @@ dl dd {
   background-image: -o-linear-gradient(#e2e2e2, #a0a0a0);
 }
 
-#current_commit_title {
+#current_commit_title, #toolbar select {
   margin: 14px;
 }
 
-#toolbar select {
-  margin: 11px;
+#find_commit {
+  width: 25em;
 }
 
 #ref_select {
