@@ -19,7 +19,7 @@
   gitgraph.loaded_count = {{nodes|length}};
   gitgraph.current_ref = {{current_ref|tojson|safe}};
   gitgraph.current_head = {{commit.hex|tojson|safe}};
-  gitgraph.base_url = {{ url_for('display_page')|tojson|safe }};
+  gitgraph.base_url = {{ url_for('display_graph_from_ref')|tojson|safe }};
   //]]>
   </script>
   <script type="text/javascript" src="{{ url_for('static', filename='js/graph.js') }}"></script>
@@ -28,10 +28,10 @@
 <body>
   <div id="toolbar">
     {% include "ref_select.html" %}
-    <div id="current_commit_title">
-      SHA ID: <input type="text" id="find_commit" value="{{commit.hex}}">
-      <input type="button" id="find_commit_button" value="Find">
-    </div>
+    <form id="current_commit_title" action="{{ url_for('display_graph_from_commit') }}" method="GET">
+      SHA ID: <input type="text" id="find_commit" name="head" value="{{commit.hex}}">
+      <input type="submit" name="find_commit_button" value="Find">
+    </form>
   </div>
   <div id="wrapper">
     <div class="loader"></div>

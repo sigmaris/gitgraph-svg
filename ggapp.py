@@ -27,18 +27,16 @@ app.url_map.converters['sha'] = SHAConverter
 class RefConverter(BaseConverter):
     def __init__(self, url_map, *items):
         super(RefConverter, self).__init__(url_map)
-        self.regex = r'refs/(?:heads|remotes|tags)/.+'
+        self.regex = r'(?:HEAD|refs/(?:heads|remotes|tags)/.+)'
 
 app.url_map.converters['ref'] = RefConverter
 
 @app.route('/')
-@app.route('/HEAD')
-def display_page():
-    return display_graph_from_ref('HEAD')
-
 @app.route('/<ref:ref>')
-def display_graph_from_ref(ref):
+def display_graph_from_ref(ref=None):
     """Displays the main graph view, starting at a certain ref (a branch, tag or remote branch)."""
+    if not ref:
+        ref ='HEAD'
     headref = repo.lookup_reference(ref)
     
     #Resolve symbolic refs
@@ -52,10 +50,13 @@ def display_graph_from_ref(ref):
     
     return display_graph(head_obj, ref)
 
+@app.route('/graph/')
 @app.route('/graph/<sha:head>')
-def display_graph_from_commit(head):
+def display_graph_from_commit(head=None):
     """Displays the main graph view starting from a certain commit."""
     try:
+        if not head:
+            head = request.args['head']
         head_obj = repo[head]
         return display_graph(head_obj)
     except KeyError:
