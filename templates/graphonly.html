@@ -32,6 +32,10 @@
   {% if found_commit %}
     $('#bottom_pane').empty();
     $('#bottom_pane').append($('#ajax_commit').children());
+    {% if refresh %}
+      //If we had to load an entirely new commit, rewrite the URL.
+      window.history.replaceState({}, '', '/graph/{{found_commit}}');
+    {% endif %}
   {% endif %}
 
   //Append to existing graph
