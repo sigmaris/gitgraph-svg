@@ -1,3 +1,4 @@
+* Autocomplete searched-for SHAs
 * Handle diffs with two branches for merges
-* When displaying a commit, scroll the tree to show the changed files
+* When displaying a commit, scroll the tree to show the changed files and scroll commit view to top.
 * Add preferences dialog of some kind
