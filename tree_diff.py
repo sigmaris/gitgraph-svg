@@ -1,3 +1,5 @@
+# -*- coding: utf-8
+from __future__ import unicode_literals
 import pygit2
 import difflib
 import string
@@ -219,7 +221,7 @@ class TreeDiffer(object):
         elif entry.type == pygit2.GIT_OBJ_BLOB:
             if entry.kind == DiffEntry.CREATED:
                 entry_content = self.repo[entry.sha].read_raw()
-                if '\0' in entry_content:
+                if b'\0' in entry_content:
                     #Binary file
                     if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.CREATED}
@@ -229,7 +231,7 @@ class TreeDiffer(object):
                     yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_inserted(ggutils.force_unicode(entry_content).splitlines())}
             elif entry.kind == DiffEntry.DELETED:
                 entry_content = self.repo[entry.sha].read_raw()
-                if '\0' in entry_content:
+                if b'\0' in entry_content:
                     #Binary file
                     if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.CREATED}
@@ -244,7 +246,7 @@ class TreeDiffer(object):
                 else:
                     new_content = self.repo[entry.sha].read_raw()
                     old_content = self.repo[entry.old_sha].read_raw()
-                    if '\0' in new_content or '\0' in old_content:
+                    if b'\0' in new_content or b'\0' in old_content:
                         #Binary file
                         if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
                             yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.MODIFIED, 'old_sha': entry.old_sha }
@@ -313,7 +315,7 @@ class TreeDiffer(object):
         new_obj = new.to_object()
         result = Modified(old, new)
         old_data = old_obj.read_raw()
-        if '\0' in old_data:
+        if b'\0' in old_data:
             result.content = None
             return result
         result.content = list(self.compare_data(old_data, new_obj.read_raw()))

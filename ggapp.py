@@ -1,3 +1,5 @@
+# -*- coding: utf-8
+from __future__ import unicode_literals
 from flask import Flask, render_template, request, escape, Markup, json, abort
 from werkzeug.routing import BaseConverter
 from werkzeug import run_simple
@@ -187,11 +189,23 @@ def get_commit_templatedata(repo, obj):
             changed_files.extend(td.commitdiff(entry))
     
     message = ggutils.force_unicode(obj.message)
+    short_message = ggutils.short_message(message)
     author = (ggutils.force_unicode(obj.author[0]), ggutils.force_unicode(obj.author[1]))
     committer = (ggutils.force_unicode(obj.committer[0]), ggutils.force_unicode(obj.committer[1]))
     author_time = ggutils.format_commit_time(obj.author[2])
     commit_time = ggutils.format_commit_time(obj.committer[2])
-    return dict(commit=obj, message=message, title=message, author=author, committer=committer, author_time=author_time, commit_time=commit_time, initial_tree=tree, td_encoder=tree_diff.DiffEntryEncoder, changed_files=changed_files)
+    return dict(
+        commit=obj,
+        message=message,
+        title=short_message,
+        author=author,
+        committer=committer,
+        author_time=author_time,
+        commit_time=commit_time,
+        initial_tree=tree,
+        td_encoder=tree_diff.DiffEntryEncoder,
+        changed_files=changed_files
+    )
     
 def get_commit(repo, obj):
     """Displays a single commit as HTML or JSON (used to load a commit's information into the bottom pane)."""

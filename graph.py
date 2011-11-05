@@ -1,3 +1,5 @@
+# -*- coding: utf-8
+from __future__ import unicode_literals
 import ggutils
 from operator import itemgetter
 
@@ -123,7 +125,7 @@ class Grapher(object):
             
             # Create a node representing this commit and the message, author and time labels
             self.display_list['nodes'].append(self.new_node(pos, currentY, commit.hex, [x.hex for x in commit.parents]))
-            label_text = ggutils.force_unicode(commit.message)
+            label_text = ggutils.force_unicode(ggutils.short_message(commit.message))
             self.display_list['labels'].append({'x': textX, 'y': currentY, 'content': label_text, 'sha': commit.hex})
             self.display_list['authors'].append({'x': 0, 'y': currentY, 'content': ggutils.force_unicode(commit.author[0]), 'sha': commit.hex})
             self.display_list['dates'].append({'x': 0, 'y': currentY, 'content': ggutils.format_commit_time(commit.commit_time), 'sha': commit.hex})
