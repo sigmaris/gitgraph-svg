@@ -210,6 +210,10 @@ $(document).ready(function() {
     $('#reveal_ajax').load(getHeadGraphURL(), $.param({offset: gitgraph.loaded_count, branches: gitgraph.existing_branches}, true));
   });
   
+  $('#find_commit').simpleAutocomp({
+    url: '/autocomplete'
+  });
+  
   $('#current_commit_title').submit(function(event) {
     var inputSHA = $('#find_commit').val();
     if(/^[a-fA-F0-9]{40}$/.test(inputSHA)) {

@@ -268,5 +268,17 @@ def get_sha(sha):
         #SHA not found in repo
         abort(404)
 
+@app.route('/autocomplete')
+def autocomplete():
+    try:
+        prefix = request.args['q']
+        obj = repo[prefix]
+        result = obj.hex
+    except:
+        result = ''
+    resp = app.make_response(result)
+    resp.mimetype = 'text/plain'
+    return resp
+
 if __name__ == '__main__':
     app.run(debug=True)
