@@ -117,7 +117,7 @@ def display_graph(head_obj, ref=None):
 
 def get_blob(obj):
     """Displays the contents of a blob, either in an HTML table with numbered lines, or as binary/plaintext"""
-    is_binary = '\0' in obj.data
+    is_binary = b'\0' in obj.data
     if is_binary:
         # It may be an image file so we try to detect the file type.
         imgtype = imghdr.what(None, obj.data)
@@ -143,7 +143,7 @@ def get_blob(obj):
 
 def get_blob_diff(repo, old_obj, obj):
     """Displays the differences between two versions of a blob, as HTML in a table."""
-    if '\0' in obj.data or '\0' in old_obj.data:
+    if b'\0' in obj.data or b'\0' in old_obj.data:
         # It may be an image file so we try to detect the file type.
         imgtype = imghdr.what(None, obj.data)
         old_imgtype = imghdr.what(None, obj.data)
@@ -270,12 +270,16 @@ def get_sha(sha):
 
 @app.route('/autocomplete')
 def autocomplete():
+    result = ''
     try:
         prefix = request.args['q']
         obj = repo[prefix]
-        result = obj.hex
+        if obj.type == pygit2.GIT_OBJ_COMMIT:
+            result = obj.hex
     except:
-        result = ''
+        # Exceptions could be raised for nonunique prefixes, nonexistent prefixes,
+        # all kinds of things. We don't really care at this point.
+        pass
     resp = app.make_response(result)
     resp.mimetype = 'text/plain'
     return resp
