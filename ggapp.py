@@ -17,7 +17,8 @@ import settings
 import ggutils
 
 app = Flask(__name__)
-repo = pygit2.Repository(settings.repo_path)
+app.config.from_object('settings')
+repo = pygit2.Repository(app.config['REPO_PATH'])
 
 class SHAConverter(BaseConverter):
     def __init__(self, url_map, *items):
@@ -190,10 +191,10 @@ def get_commit_templatedata(repo, obj):
     
     message = ggutils.force_unicode(obj.message)
     short_message = ggutils.short_message(message)
-    author = (ggutils.force_unicode(obj.author[0]), ggutils.force_unicode(obj.author[1]))
-    committer = (ggutils.force_unicode(obj.committer[0]), ggutils.force_unicode(obj.committer[1]))
-    author_time = ggutils.format_commit_time(obj.author[2])
-    commit_time = ggutils.format_commit_time(obj.committer[2])
+    author = (ggutils.force_unicode(obj.author.name), ggutils.force_unicode(obj.author.email))
+    committer = (ggutils.force_unicode(obj.committer.name), ggutils.force_unicode(obj.committer.email))
+    author_time = ggutils.format_commit_time(obj.author.time)
+    commit_time = ggutils.format_commit_time(obj.committer.time)
     return dict(
         commit=obj,
         message=message,
