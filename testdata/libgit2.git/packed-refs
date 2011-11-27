@@ -1,0 +1,26 @@
+# pack-refs with: peeled 
+b64e11d1fe13a15edbe0f26dc5aaf96aa07f9d91 refs/tags/v0.8.0
+9d1dcca229c624c7551a287963a19e95ba4753b6 refs/tags/v0.3.0
+4eec2c0d4a332ffb9237a0851578ec388e1f99f4 refs/tags/v0.2.0
+3eaf34f4c602b9e155e2f4c6ae26c9250ac37d50 refs/tags/v0.15.0
+52e50c1a80db56b91ce3d99bd546c07b7135f735 refs/tags/v0.14.0
+37172582ec7ff9cb47c43c5d5b2334bf8c547569 refs/tags/v0.13.0
+40774549e14e2d9f24b9271173d58b44f82d5254 refs/tags/v0.12.0
+6dcb09b5b57875f334f61aebed695e2e4193db5e refs/tags/v0.11.0
+7064938bd5e7ef47bfd79a685a62c1e2649e2ce7 refs/tags/v0.10.0
+23f8588dde934e8f33c263c6d8359b2ae095f863 refs/tags/v0.1.0
+^c5b97d5ae6c19d5c5df71a34c7fbeeda2479ccbc
+6d0ef97478633263cafa1329e865f5a33b950ac3 refs/heads/utf8-paths-win32
+cb3e1334e8a5c3003fa0419442fc06d45508ac31 refs/heads/threadsafe
+c94785a9f373b6604402ba6a301b828b80ab8cd8 refs/heads/repo-ownership
+62dd6d1637e40f9fa16005ef447d4fc6f8fb25e8 refs/heads/new-references
+3eaf34f4c602b9e155e2f4c6ae26c9250ac37d50 refs/heads/master
+d78312cddb971477d8008b7b33b0b9e27c8da022 refs/heads/halloc
+4ac0bd976d0f9e5ae56ef2feccef8ed140c3d44f refs/heads/gh-pages
+6690884f84e5609d9dcd7ec5ad30fe86371100fb refs/heads/getenv-win32
+d3789825d3823bdbbebe278172345243618ca541 refs/heads/fileops
+bdd31dd5e832126b2f22fccbe244a1106c241ab0 refs/heads/error-handling
+880b6f0c22153db164ecb3a18c362ba8337365d3 refs/heads/development
+8cd767ef52ad35331f082394ec93df8e57757120 refs/heads/config-parsing
+107e30e9c58facc3fdafefa7bb17ab6f04ddd2ec refs/heads/config-int-types
+55f207110fac886861b100831305c32c94da01da refs/heads/clay-test
