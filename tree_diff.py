@@ -221,36 +221,38 @@ class TreeDiffer(object):
         elif entry.type == pygit2.GIT_OBJ_BLOB:
             if entry.kind == DiffEntry.CREATED:
                 entry_content = self.repo[entry.sha].read_raw()
-                if b'\0' in entry_content:
+                unicode_content = ggutils.force_unicode(entry_content)
+                if b'\0' in entry_content or unicode_content is None:
                     #Binary file
                     if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.CREATED}
                     else:
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.CREATED,0,0,'(Binary file, created)')]}
                 else:
-                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_inserted(ggutils.force_unicode(entry_content).splitlines())}
+                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_inserted(unicode_content.splitlines())}
             elif entry.kind == DiffEntry.DELETED:
                 entry_content = self.repo[entry.sha].read_raw()
-                if b'\0' in entry_content:
+                unicode_content = ggutils.force_unicode(entry_content)
+                if b'\0' in entry_content or unicode_content is None:
                     #Binary file
                     if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.CREATED}
                     else:
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.DELETED,0,0,'(Binary file, deleted)')]}
                 else:
-                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_deleted(ggutils.force_unicode(entry_content).splitlines())}
+                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_deleted(unicode_content.splitlines())}
             elif entry.kind == DiffEntry.MODIFIED:
                 new_content = self.repo[entry.sha].read_raw()
                 old_content = self.repo[entry.old_sha].read_raw()
-                if b'\0' in new_content or b'\0' in old_content:
+                new_unicode = ggutils.force_unicode(new_content).splitlines()
+                old_unicode = ggutils.force_unicode(old_content).splitlines()
+                if b'\0' in new_content or b'\0' in old_content or old_unicode is None or new_unicode is None:
                     #Binary file
                     if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.MODIFIED, 'old_sha': entry.old_sha }
                     else:
                         yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.MODIFIED,0,0,'(Binary file, modified)')]}
                 else:
-                    new_unicode = ggutils.force_unicode(new_content).splitlines()
-                    old_unicode = ggutils.force_unicode(old_content).splitlines()
                     yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': self._context_diff(old_unicode,new_unicode,entry.name)}
 
     def diff(self, old, new, parent_name=None):

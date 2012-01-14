@@ -145,9 +145,12 @@ def get_blob(obj, filename_hint=None):
                 highlighted = ggutils.force_unicode(obj.data)
             else:
                 highlighted = highlight(obj.data, lexer, HtmlFormatter(nowrap=True))
-            resp = app.make_response(render_template(
-                'simple_file.html', sha=obj.hex, filename=filename_hint,
-                content=highlighted.splitlines()))
+            if highlighted:
+                resp = app.make_response(render_template(
+                    'simple_file.html', sha=obj.hex, filename=filename_hint,
+                    content=highlighted.splitlines()))
+            else:
+                resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
     else:
         resp = app.make_response(obj.data)
         # At this point, we have some data, but no idea what mimetype it should be.

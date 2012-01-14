@@ -11,7 +11,7 @@ def format_commit_time(timestamp):
 
 def force_unicode(text):
     return UnicodeDammit(text, smartQuotesTo=None).unicode
-
+    
 def short_message(message):
     first_line = message.strip().splitlines()[0]
     if len(first_line) <= GIT_SHORT_MESSAGE:
