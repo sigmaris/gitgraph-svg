@@ -1,6 +1,6 @@
 # -*- coding: utf-8
 from __future__ import unicode_literals
-from flask import Flask, render_template, request, escape, Markup, json, abort
+from flask import Flask, render_template, request, escape, Markup, json, abort, g
 from werkzeug.routing import BaseConverter
 from werkzeug import run_simple
 from werkzeug.contrib.profiler import ProfilerMiddleware
@@ -19,7 +19,11 @@ import ggutils
 
 app = Flask(__name__)
 app.config.from_object('settings')
-repo = pygit2.Repository(app.config['REPO_PATH'])
+
+@app.before_request
+def open_repo():
+    if not hasattr(g, 'repo'):
+        g.repo = pygit2.Repository(app.config['REPO_PATH'])
 
 class SHAConverter(BaseConverter):
     def __init__(self, url_map, *items):
@@ -41,12 +45,12 @@ def display_graph_from_ref(ref=None):
     """Displays the main graph view, starting at a certain ref (a branch, tag or remote branch)."""
     if not ref:
         ref ='HEAD'
-    headref = repo.lookup_reference(ref)
+    headref = g.repo.lookup_reference(ref)
     
     #Resolve symbolic refs
     if headref.type == pygit2.GIT_REF_SYMBOLIC:
         headref = headref.resolve()
-    head_obj = repo[headref.oid]
+    head_obj = g.repo[headref.oid]
     
     #Fully resolve tags..
     while head_obj.type == pygit2.GIT_OBJ_TAG:
@@ -61,7 +65,7 @@ def display_graph_from_commit(head=None):
     try:
         if not head:
             head = request.args['head']
-        head_obj = repo[head]
+        head_obj = g.repo[head]
         return display_graph(head_obj)
     except KeyError:
         abort(404)
@@ -78,7 +82,7 @@ def display_graph(head_obj, ref=None):
     if search_commit:
         # Try to find commit in current branch
         stop = -1
-        for (index, commit) in enumerate(islice(repo.walk(head_obj.oid, pygit2.GIT_SORT_TIME), offset, None)):
+        for (index, commit) in enumerate(islice(g.repo.walk(head_obj.oid, pygit2.GIT_SORT_TIME), offset, None)):
             if commit.hex == search_commit:
                 stop = index + offset + 11
                 break
@@ -86,7 +90,7 @@ def display_graph(head_obj, ref=None):
             #at this point, it was not found in the current branch..
             try:
                 # try switching to display the graph starting at the searched-for commit
-                head_obj = repo[search_commit]
+                head_obj = g.repo[search_commit]
                 if head_obj.type != pygit2.GIT_OBJ_COMMIT:
                     abort(400)
                 else:
@@ -102,19 +106,19 @@ def display_graph(head_obj, ref=None):
     else:
         stop = offset + 100
     
-    walker = islice(repo.walk(head_obj.oid, pygit2.GIT_SORT_TIME), offset, stop)
+    walker = islice(g.repo.walk(head_obj.oid, pygit2.GIT_SORT_TIME), offset, stop)
     (display_list, existing_branches) = grapher.draw_commits(walker, branches, offset)
 
     if request.is_xhr:
         if search_commit:
             # Need to load data for the searched/found commit as well
-            extra_template_data = dict(display_list.items() + get_commit_templatedata(repo, repo[search_commit]).items())
+            extra_template_data = dict(display_list.items() + get_commit_templatedata(g.repo, g.repo[search_commit]).items())
         else:
             extra_template_data = display_list
         return render_template('graphonly.html', existing_branches=existing_branches, current_ref=ref, refresh=switch_branch, found_commit=search_commit, **extra_template_data)
     else:
-        (tags, branches, remotes) = get_all_refs(repo)
-        extra_template_data = dict(display_list.items() + get_commit_templatedata(repo, head_obj).items())
+        (tags, branches, remotes) = get_all_refs(g.repo)
+        extra_template_data = dict(display_list.items() + get_commit_templatedata(g.repo, head_obj).items())
         return render_template('base.html', tags=tags, branches=branches, remotes=remotes, current_ref=ref, existing_branches=existing_branches, **extra_template_data)
 
 def get_blob(obj, filename_hint=None):
@@ -184,7 +188,7 @@ def get_tree_diff(repo, commit):
         to_compare = commit.parents[0]
     return td.tree_diff(to_compare.tree, commit.tree)
 
-def get_tree(tree):
+def get_tree(repo, tree):
     """Gets a git (sub)tree in the JSON format required by jsTree"""
     parent_name = request.args.get('parent_name',None)
     td = tree_diff.TreeDiffer(repo)
@@ -265,22 +269,22 @@ def get_sha(sha):
     """Displays either a blob (optionally comparing it to another blob) or
     a single commit."""
     try:
-        obj = repo[sha]
+        obj = g.repo[sha]
         if obj.type == pygit2.GIT_OBJ_BLOB:
             filename_hint = request.args.get('filename_hint', None)
             try:
                 compare_to = request.args['compare_to']
             except KeyError:
                 return get_blob(obj, filename_hint)
-            old_obj = repo[compare_to]
+            old_obj = g.repo[compare_to]
             if old_obj.type == pygit2.GIT_OBJ_BLOB:
-                return get_blob_diff(repo, old_obj, obj, filename_hint)
+                return get_blob_diff(g.repo, old_obj, obj, filename_hint)
             else:
                 abort(400) #can't compare a blob against something else.
         elif obj.type == pygit2.GIT_OBJ_COMMIT:
-            return get_commit(repo, obj)
+            return get_commit(g.repo, obj)
         elif obj.type == pygit2.GIT_OBJ_TREE:
-            return get_tree(obj)
+            return get_tree(g.repo, obj)
         abort(400)
     except KeyError:
         #SHA not found in repo
@@ -291,7 +295,7 @@ def autocomplete():
     result = ''
     try:
         prefix = request.args['q']
-        obj = repo[prefix]
+        obj = g.repo[prefix]
         if obj.type == pygit2.GIT_OBJ_COMMIT:
             result = obj.hex
     except:
