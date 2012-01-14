@@ -6,7 +6,7 @@ from werkzeug import run_simple
 from werkzeug.contrib.profiler import ProfilerMiddleware
 import pygit2
 from pygments import highlight
-from pygments.lexers import guess_lexer, guess_lexer_for_filename, TextLexer
+from pygments.lexers import guess_lexer, guess_lexer_for_filename
 from pygments.util import ClassNotFound
 from pygments.formatters import HtmlFormatter
 from itertools import islice
@@ -138,8 +138,9 @@ def get_blob(obj, filename_hint=None):
                 else:
                     lexer = guess_lexer(obj.data, stripnl=False, encoding='chardet')
             except ClassNotFound:
-                lexer = TextLexer(stripnl=False, encoding='chardet')
-            highlighted = highlight(obj.data, lexer, HtmlFormatter(nowrap=True))
+                highlighted = ggutils.force_unicode(obj.data)
+            else:
+                highlighted = highlight(obj.data, lexer, HtmlFormatter(nowrap=True))
             resp = app.make_response(render_template(
                 'simple_file.html', sha=obj.hex, filename=filename_hint,
                 content=highlighted.splitlines()))
