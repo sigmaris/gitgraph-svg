@@ -7,8 +7,9 @@ import os
 import shutil
 import pygit2
 import pprint
-
+import re
 import tree_diff
+from tests.webtests import SPAN_REGEX
 
 lorem1 = """Lorem ipsum dolor sit amet, consectetur adipisicing elit,
 sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
@@ -53,7 +54,8 @@ class TreeDiffTest(unittest.TestCase):
             entry_line = entry_list[i]
             if kind:
                 self.assertEqual(entry_line[0],kind)
-            self.assertIn(content_list[i],entry_line[3])
+            # Remove span highlight tags
+            self.assertIn(content_list[i],SPAN_REGEX.sub('', entry_line[3]))
     
     def _content_contains_lines(self, entry_lines, content_lines, kind=None, any_line=False):
         for line in content_lines:

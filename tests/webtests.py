@@ -3,7 +3,10 @@ from __future__ import unicode_literals
 import unittest
 import os
 import ggapp
+import re
 import __main__
+
+SPAN_REGEX = re.compile(r'</?span[^>]*>')
 
 class WebTestCase(unittest.TestCase):
     def setUp(self):

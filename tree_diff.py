@@ -1,13 +1,16 @@
 # -*- coding: utf-8
 from __future__ import unicode_literals
+from pygments import highlight
+from pygments.lexers import guess_lexer, guess_lexer_for_filename
+from pygments.formatters import HtmlFormatter
 import pygit2
 import difflib
+import itertools
 import string
 import os
 from cgi import escape
 from flask import json, render_template
 import ggutils
-import settings
 
 DIR_SEP = os.sep
 
@@ -16,19 +19,19 @@ class DiffEntry(object):
     CREATED = 'created'
     DELETED = 'deleted'
     MODIFIED = 'modified'
-    
+
     @classmethod
     def unmodified(cls, git_entry, parent_name=None):
         return DiffEntry(cls.UNMODIFIED, git_entry, parent_name)
-    
+
     @classmethod
     def created(cls, git_entry, parent_name=None):
         return DiffEntry(cls.CREATED, git_entry, parent_name)
-    
+
     @classmethod
     def deleted(cls, git_entry, parent_name=None):
         return DiffEntry(cls.DELETED, git_entry, parent_name)
-    
+
     def __init__(self, kind, git_entry, parent_name=None):
         self.children = []
         if parent_name:
@@ -46,13 +49,13 @@ class DiffEntry(object):
         except KeyError:
             #Probably a reference to other project
             self.type = 'submodule'
-    
+
     def __getitem__(self, key):
         if isinstance(key, int):
             return self.children[key]
         else:
             raise TypeError
-    
+
     def __str__(self):
         return "<tree_diff.DiffEntry: {0} {1} sha:{2}>".format(self.basename, self.kind, self.sha)
 
@@ -96,7 +99,7 @@ class DiffEntryEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, DiffEntry):
             cls = o.kind
-            
+
             json_dict = {
                 'data': {
                     'title': o.basename,
@@ -109,13 +112,13 @@ class DiffEntryEncoder(json.JSONEncoder):
                     'full_name': o.name
                 }
             }
-            
+
             if hasattr(o, 'content') and o.content:
                 json_dict['metadata']['content'] = render_template('changed_file.html', file={'name': o.name, 'content': o.content})
-            
+
             if hasattr(o, 'old_sha') and o.old_sha:
                 json_dict['metadata']['old_sha'] = o.old_sha
-            
+
             if o.type == pygit2.GIT_OBJ_TREE:
                 if o.children:
                     json_dict['children'] = o.children
@@ -129,13 +132,13 @@ class DiffEntryEncoder(json.JSONEncoder):
                 typeclass = 'file'
             else:
                 typeclass = 'reference'
-            
+
             if o.kind == DiffEntry.MODIFIED:
                 json_dict['metadata']['old_name'] = o.old_name
                 json_dict['metadata']['old_sha'] = o.old_sha
-                        
+
             json_dict['data']['attr']['class'] = '{0} {1}'.format(cls, typeclass)
-            
+
             return json_dict
         else:
             return json.JSONEncoder.default(self, o)
@@ -147,72 +150,59 @@ class TreeDiffer(object):
         self.context = 3
         self.ignore_whitespace = True
         self.sm = difflib.SequenceMatcher(lambda line: len(line.strip()) == 0)
-        self.sm2 = difflib.SequenceMatcher(lambda char: char in string.whitespace)
+        self.formatter = HtmlFormatter(nowrap=True)
 
-    def _markup_line_diff(self, opcodes, old, new):
-        oldline = ''
-        newline = ''
-        for tag, i1, i2, j1, j2 in opcodes:
-            if tag == 'equal':
-                oldline += escape(old[i1:i2])
-                newline += escape(new[j1:j2])
-            elif tag == 'delete':
-                oldline += ('<del>' + escape(old[i1:i2]) + '</del>')
-            elif tag == 'insert':
-                newline += ('<ins>' + escape(new[j1:j2]) + '</ins>')
-            elif tag == 'replace':
-                oldline += ('<span class="replaced">' + escape(old[i1:i2]) + '</span>')
-                newline += ('<span class="replaced">' + escape(new[j1:j2]) + '</span>')
-        return (oldline, newline)
-    
-    def _markup_diff(self, old, new, opcodes):
+    def _markup_diff(self, old, new, opcodes, name=None):
+        # Join the lines to make a full document
+        old_joined = '\n'.join(old)
+        new_joined = '\n'.join(new)
+        # Pick the new content to guess the lexer, if necessary
+        if name:
+            lexer = guess_lexer_for_filename(name, new_joined, stripnl=False)
+        else:
+            lexer = guess_lexer(new_joined, stripnl=False)
+        old_split = highlight(old_joined, lexer, self.formatter).splitlines()
+        new_split = highlight(new_joined, lexer, self.formatter).splitlines()
         for tag, i1, i2, j1, j2 in opcodes:
             if tag == 'equal':
                 for i in range(i2-i1):
-                    yield (DiffEntry.UNMODIFIED, i1 + i + 1, j1 + i + 1, escape(old[i1+i].rstrip()))
+                    yield (DiffEntry.UNMODIFIED, i1 + i + 1, j1 + i + 1, old_split[i1+i].rstrip())
             elif tag == 'delete':
                 for i in range(i2-i1):
-                    yield (DiffEntry.DELETED, i1 + i + 1, None, escape(old[i1+i].rstrip()))
+                    yield (DiffEntry.DELETED, i1 + i + 1, None, old_split[i1+i].rstrip())
             elif tag == 'insert':
                 for j in range(j2-j1):
-                    yield (DiffEntry.CREATED, None, j1 + j + 1, escape(new[j1+j].rstrip()))
+                    yield (DiffEntry.CREATED, None, j1 + j + 1, new_split[j1+j].rstrip())
             elif tag == 'replace':
-                if i2 - i1 == j2 - j1:
-                    for i in range(i2-i1):
-                        self.sm2.set_seqs(old[i1 + i], new[j1 + i])
-                        (oldline, newline) = self._markup_line_diff(self.sm2.get_opcodes(),old[i1 + i], new[j1 + i])
-                        yield (DiffEntry.DELETED, i1 + i + 1, None, oldline.rstrip())
-                        yield (DiffEntry.CREATED, None, j1 + i + 1, newline.rstrip())
-                else:
-                    for i in range(i2-i1):
-                        yield (DiffEntry.DELETED, i1 + i + 1, None, escape(old[i1+i].rstrip()))
-                    for j in range(j2-j1):
-                        yield (DiffEntry.CREATED, None, j1 + j + 1, escape(new[j1+j].rstrip()))
-    
+                for i in range(i2-i1):
+                    yield (DiffEntry.DELETED, i1 + i + 1, None, old_split[i1+i].rstrip())
+                for j in range(j2-j1):
+                    yield (DiffEntry.CREATED, None, j1 + j + 1, new_split[j1+j].rstrip())
+
     def _set_sm_seqs(self, old, new):
         # Strip all whitespace from lines
         if self.ignore_whitespace:
             self.sm.set_seqs([''.join(s.split()) for s in old],[''.join(s.split()) for s in new])
         else:
             self.sm.set_seqs(old,new)
-        
-    def _full_diff(self, old, new):
+
+    def _full_diff(self, old, new, name=None):
         self._set_sm_seqs(old,new)
         changes = self.sm.get_opcodes()
-        for change in self._markup_diff(old, new, changes):
+        for change in self._markup_diff(old, new, changes, name):
             yield change
-        
-    def _context_diff(self, old, new):
+
+    def _context_diff(self, old, new, name=None):
         self._set_sm_seqs(old,new)
         groups = self.sm.get_grouped_opcodes(self.context)
         separator = False
         for group in groups:
             if separator:
                 yield (DiffEntry.UNMODIFIED, None, None, '<hr />')
-            for change in self._markup_diff(old, new, group):
+            for change in self._markup_diff(old, new, group, name):
                 yield change
             separator = True
-    
+
     def commitdiff(self, entry):
         if entry.children:
             for child in entry.children:
@@ -240,23 +230,19 @@ class TreeDiffer(object):
                 else:
                     yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _all_deleted(ggutils.force_unicode(entry_content).splitlines())}
             elif entry.kind == DiffEntry.MODIFIED:
-                #Use the already calculated diff in content?
-                if hasattr(entry, 'content'):
-                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': _filter_context(entry.content, 3)}
-                else:
-                    new_content = self.repo[entry.sha].read_raw()
-                    old_content = self.repo[entry.old_sha].read_raw()
-                    if b'\0' in new_content or b'\0' in old_content:
-                        #Binary file
-                        if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
-                            yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.MODIFIED, 'old_sha': entry.old_sha }
-                        else:
-                            yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.MODIFIED,0,0,'(Binary file, modified)')]}
+                new_content = self.repo[entry.sha].read_raw()
+                old_content = self.repo[entry.old_sha].read_raw()
+                if b'\0' in new_content or b'\0' in old_content:
+                    #Binary file
+                    if entry.name.endswith(('.png','.jpg','.jpeg','.gif')):
+                        yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': 'image', 'content': DiffEntry.MODIFIED, 'old_sha': entry.old_sha }
                     else:
-                        new_unicode = ggutils.force_unicode(new_content).splitlines()
-                        old_unicode = ggutils.force_unicode(old_content).splitlines()
-                        yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': self._context_diff(old_unicode,new_unicode)}
-    
+                        yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': True, 'content': [(DiffEntry.MODIFIED,0,0,'(Binary file, modified)')]}
+                else:
+                    new_unicode = ggutils.force_unicode(new_content).splitlines()
+                    old_unicode = ggutils.force_unicode(old_content).splitlines()
+                    yield {'name': entry.name, 'kind':entry.kind, 'sha': entry.sha, 'binary': False, 'content': self._context_diff(old_unicode,new_unicode,entry.name)}
+
     def diff(self, old, new, parent_name=None):
         try:
             old_obj = old.to_object()
@@ -268,20 +254,20 @@ class TreeDiffer(object):
             new_is_bad = False
         except KeyError:
             new_is_bad = True
-        
+
         if old_is_bad and new_is_bad:
             return Modified(old, new, [DiffEntry.unmodified(new, parent_name)])
         elif old_is_bad or new_is_bad:
             return Modified(old, new, [DiffEntry.deleted(old, parent_name), DiffEntry.created(new, parent_name)])
-        
+
         if old_obj.type != new_obj.type:
             return Modified(old, new, [DiffEntry.deleted(old, parent_name), DiffEntry.created(new, parent_name)])
-        
+
         if parent_name:
             joined_name = DIR_SEP.join([parent_name, new.name])
         else:
             joined_name = new.name
-        
+
         if old_obj.type == pygit2.GIT_OBJ_TREE:
             return Modified(old, new, self.tree_diff(old_obj,new_obj, joined_name), parent_name)
         else:
@@ -309,7 +295,7 @@ class TreeDiffer(object):
             if old[i].name not in new:
                 entries.append(DiffEntry.deleted(old[i],parent_name))
         return entries
-    
+
     def blob_diff(self, old, new):
         old_obj = old.to_object()
         new_obj = new.to_object()
@@ -320,8 +306,8 @@ class TreeDiffer(object):
             return result
         result.content = list(self.compare_data(old_data, new_obj.read_raw()))
         return result
-    
-    def compare_data(self, old_data, new_data):
+
+    def compare_data(self, old_data, new_data, name=None):
         old_data = ggutils.force_unicode(old_data).splitlines()
         new_data = ggutils.force_unicode(new_data).splitlines()
-        return self._full_diff(old_data, new_data)
+        return self._full_diff(old_data, new_data, name)

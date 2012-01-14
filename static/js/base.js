@@ -189,16 +189,17 @@ $(document).ready(function() {
           //Load content via AJAX.. trim off the # from href
           var compare_to = li_element.data('old_sha');
           if(compare_to) {
-            data = {compare_to: compare_to};
+            data = {
+              compare_to: compare_to,
+              filename_hint: li_element.data('full_name')
+            };
           } else {
-            data = {};
+            data = {
+              filename_hint: li_element.data('full_name')
+            };
           }
           var sha_to_load = a_element.attr('href').substring(1);
-          $('#bottom_pane').load('/sha/' + sha_to_load, $.param(data), function(responseText, textStatus, jqXHR) {
-            if(textStatus == 'success' || textStatus == 'notmodified') {
-              $('#filename_' + sha_to_load).text(li_element.data('full_name')).append($('<a class="nav_link" href="#changed_line">(Go to first change)</a>'));
-            }
-          });
+          $('#bottom_pane').load('/sha/' + sha_to_load, $.param(data));
         }
       }
     }

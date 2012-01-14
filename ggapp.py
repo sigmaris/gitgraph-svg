@@ -5,12 +5,12 @@ from werkzeug.routing import BaseConverter
 from werkzeug import run_simple
 from werkzeug.contrib.profiler import ProfilerMiddleware
 import pygit2
+from pygments import highlight
+from pygments.lexers import guess_lexer, guess_lexer_for_filename
+from pygments.formatters import HtmlFormatter
 from itertools import islice
-import time
 import imghdr
 import re
-import mimetypes
-import types
 import tree_diff
 import graph
 import settings
@@ -116,7 +116,7 @@ def display_graph(head_obj, ref=None):
         extra_template_data = dict(display_list.items() + get_commit_templatedata(repo, head_obj).items())
         return render_template('base.html', tags=tags, branches=branches, remotes=remotes, current_ref=ref, existing_branches=existing_branches, **extra_template_data)
 
-def get_blob(obj):
+def get_blob(obj, filename_hint=None):
     """Displays the contents of a blob, either in an HTML table with numbered lines, or as binary/plaintext"""
     is_binary = b'\0' in obj.data
     if is_binary:
@@ -127,12 +127,18 @@ def get_blob(obj):
         #TODO: only return a snippet, as here, if this is an AJAX request. Otherwise return a full page?
         if is_binary:
             if imgtype:
-                resp = app.make_response(render_template('simple_image.html', sha=obj.hex))
+                resp = app.make_response(render_template('simple_image.html', filename=filename_hint, sha=obj.hex))
             else:
                 resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
         else:
-            # We need to pass unicode to Jinja2, so convert using UnicodeDammit:
-            resp = app.make_response(render_template('simple_file.html', sha=obj.hex, content=ggutils.force_unicode(obj.data).splitlines()))
+            if filename_hint:
+                lexer = guess_lexer_for_filename(filename_hint, obj.data, stripnl=False)
+            else:
+                lexer = guess_lexer(obj.data, stripnl=False)
+            highlighted = highlight(obj.data, lexer, HtmlFormatter(nowrap=True))
+            resp = app.make_response(render_template(
+                'simple_file.html', sha=obj.hex, filename=filename_hint,
+                content=highlighted.splitlines()))
     else:
         resp = app.make_response(obj.data)
         # At this point, we have some data, but no idea what mimetype it should be.
@@ -142,7 +148,7 @@ def get_blob(obj):
             resp.mimetype = 'text/plain'
     return resp
 
-def get_blob_diff(repo, old_obj, obj):
+def get_blob_diff(repo, old_obj, obj, filename_hint=None):
     """Displays the differences between two versions of a blob, as HTML in a table."""
     if b'\0' in obj.data or b'\0' in old_obj.data:
         # It may be an image file so we try to detect the file type.
@@ -150,12 +156,17 @@ def get_blob_diff(repo, old_obj, obj):
         old_imgtype = imghdr.what(None, obj.data)
         if imgtype and old_imgtype:
             #They are presumably both images...
-            resp = app.make_response(render_template('simple_image.html', sha=obj.hex, old_sha=old_obj.hex))
+            resp = app.make_response(render_template('simple_image.html', filename=filename_hint, 
+                sha=obj.hex, old_sha=old_obj.hex))
         else:
             resp = app.make_response(Markup('<pre>(Binary file)</pre>'))
     else:
         td = tree_diff.TreeDiffer(repo)
-        resp = app.make_response(render_template('changed_file.html', file={'name': '', 'sha':obj.hex, 'content': td.compare_data(old_obj.data, obj.data)}))
+        resp = app.make_response(render_template('changed_file.html', file={
+            'name': filename_hint,
+            'sha': obj.hex,
+            'content': td.compare_data(old_obj.data, obj.data, filename_hint)
+        }))
     return resp
 
 def get_tree_diff(repo, commit):
@@ -191,10 +202,10 @@ def get_commit_templatedata(repo, obj):
     
     message = ggutils.force_unicode(obj.message)
     short_message = ggutils.short_message(message)
-    author = (ggutils.force_unicode(obj.author.name), ggutils.force_unicode(obj.author.email))
-    committer = (ggutils.force_unicode(obj.committer.name), ggutils.force_unicode(obj.committer.email))
-    author_time = ggutils.format_commit_time(obj.author.time)
-    commit_time = ggutils.format_commit_time(obj.committer.time)
+    author = (ggutils.force_unicode(obj.author[0]), ggutils.force_unicode(obj.author[1]))
+    committer = (ggutils.force_unicode(obj.committer[0]), ggutils.force_unicode(obj.committer[1]))
+    author_time = ggutils.format_commit_time(obj.author[2])
+    commit_time = ggutils.format_commit_time(obj.committer[2])
     return dict(
         commit=obj,
         message=message,
@@ -251,13 +262,14 @@ def get_sha(sha):
     try:
         obj = repo[sha]
         if obj.type == pygit2.GIT_OBJ_BLOB:
+            filename_hint = request.args.get('filename_hint', None)
             try:
                 compare_to = request.args['compare_to']
             except KeyError:
-                return get_blob(obj)
+                return get_blob(obj, filename_hint)
             old_obj = repo[compare_to]
             if old_obj.type == pygit2.GIT_OBJ_BLOB:
-                return get_blob_diff(repo, old_obj, obj)
+                return get_blob_diff(repo, old_obj, obj, filename_hint)
             else:
                 abort(400) #can't compare a blob against something else.
         elif obj.type == pygit2.GIT_OBJ_COMMIT:

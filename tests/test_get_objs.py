@@ -1,6 +1,6 @@
 # -*- coding: utf-8
 from __future__ import unicode_literals
-from webtests import WebTestCase
+from webtests import WebTestCase, SPAN_REGEX
 import json
 
 README_BLOB = 'ed2bcb304be4a6f532f59a832b00199d989d140c'
@@ -10,18 +10,20 @@ TREE_HEX = 'bbf1a98f3ab299ac8e00a041b481a7bf08c5317a'
 class GetObjectsTestCase(WebTestCase):
     def test_get_blob(self):
         resp = self.app.get('/sha/{0}'.format(README_BLOB))
-        self.assertIn('libgit2 - the Git linkable library',resp.data)
+        highlight_stripped = SPAN_REGEX.sub('', resp.data)
+        self.assertIn('libgit2 - the Git linkable library',highlight_stripped)
     
     def test_get_commit(self):
         resp = self.app.get('/sha/{0}'.format(COMMIT_HEX))
-        self.assertIn('transport: Add `git_transport_valid_url`', resp.data)
-        self.assertIn('Vicent Marti', resp.data)
-        self.assertIn('tanoku@gmail.com', resp.data)
-        self.assertIn('parent_6616e207506d2c3ac287a3c5e631b3d442464bed', resp.data)
-        self.assertIn('include/git2/transport.h', resp.data)
-        self.assertIn('src/transport.c', resp.data)
-        self.assertIn(' * Return whether a string is a valid transport URL', resp.data)
-        self.assertIn('/* TODO: Parse "example.com:project.git" as an SSH URL */', resp.data)
+        highlight_stripped = SPAN_REGEX.sub('', resp.data)
+        self.assertIn('transport: Add `git_transport_valid_url`', highlight_stripped)
+        self.assertIn('Vicent Marti', highlight_stripped)
+        self.assertIn('tanoku@gmail.com', highlight_stripped)
+        self.assertIn('parent_6616e207506d2c3ac287a3c5e631b3d442464bed', highlight_stripped)
+        self.assertIn('include/git2/transport.h', highlight_stripped)
+        self.assertIn('src/transport.c', highlight_stripped)
+        self.assertIn(' * Return whether a string is a valid transport URL', highlight_stripped)
+        self.assertIn('/* TODO: Parse &quot;example.com:project.git&quot; as an SSH URL */', highlight_stripped)
     
     def test_get_tree(self):
         resp = self.app.get('/sha/{0}'.format(TREE_HEX))

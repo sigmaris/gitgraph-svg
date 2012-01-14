@@ -1,12 +1,19 @@
 <table class="filetable">
-  <thead><tr><th colspan="3" id="filename_{{sha}}"></th></tr></thead>
+  <thead>
+    <tr>
+      <th colspan="3" id="filename_{{sha}}">
+        {{ filename }}
+        <a class="nav_link" href="#changed_line">(Go to first change)</a>
+      </th>
+    </tr>
+  </thead>
   <tbody>
     {% for line in content -%}
     <tr>
       <td>
         {{loop.index}}
       </td>
-      <td><pre>{{line}}</pre></td>
+      <td><pre>{{line|safe}}</pre></td>
     </tr>
     {%- endfor %}
   </tbody>

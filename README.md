@@ -4,9 +4,10 @@ A Git repository browser that displays a graph of branches using inline SVG and 
 
 Dependencies required
 ---------------------
- * [libgit2](http://libgit2.github.com/) and the [pygit2](https://github.com/libgit2/pygit2) Python-bindings - version 0.13+.
+ * [libgit2](http://libgit2.github.com/) and the [pygit2](https://github.com/libgit2/pygit2) Python-bindings - version 0.15.0
  * [BeautifulSoup](http://www.crummy.com/software/BeautifulSoup/) for encoding detection and Unicode conversion.
  * [Flask](http://flask.pocoo.org/)
+ * [Pygments](http://pygments.org/)
 
 To run
 ------
