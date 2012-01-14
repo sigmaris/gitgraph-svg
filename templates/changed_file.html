@@ -16,7 +16,7 @@
   <tbody>
     {% for line in file.content -%}
     <tr class="{{line[0]}}">
-      <td>
+      <td class="lineno">
         {% if line[0] != "unmodified" %}
         <a name="changed_line"></a>
         {% endif %}
@@ -24,7 +24,7 @@
         {{line[1]}}
         {% endif %}
       </td>
-      <td>
+      <td class="lineno">
         {% if line[2] %}
         {{line[2]}}
         {% endif %}
