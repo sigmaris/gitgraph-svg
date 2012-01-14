@@ -1,7 +1,8 @@
 # -*- coding: utf-8
 from __future__ import unicode_literals
 from pygments import highlight
-from pygments.lexers import guess_lexer, guess_lexer_for_filename
+from pygments.lexers import guess_lexer, guess_lexer_for_filename, TextLexer
+from pygments.util import ClassNotFound
 from pygments.formatters import HtmlFormatter
 import pygit2
 import difflib
@@ -157,12 +158,20 @@ class TreeDiffer(object):
         old_joined = '\n'.join(old)
         new_joined = '\n'.join(new)
         # Pick the new content to guess the lexer, if necessary
-        if name:
-            lexer = guess_lexer_for_filename(name, new_joined, stripnl=False)
-        else:
-            lexer = guess_lexer(new_joined, stripnl=False)
+        try:
+            if name:
+                lexer = guess_lexer_for_filename(name, new_joined, stripnl=False, encoding='chardet')
+            else:
+                lexer = guess_lexer(new_joined, stripnl=False, encoding='chardet')
+        except ClassNotFound:
+            lexer = TextLexer(stripnl=False, encoding='chardet')
         old_split = highlight(old_joined, lexer, self.formatter).splitlines()
         new_split = highlight(new_joined, lexer, self.formatter).splitlines()
+        # highlight() may trim blank lines, so replace them
+        if len(old_split) < len(old):
+            old_split = itertools.repeat('', len(old) - len(old_split))
+        if len(new_split) < len(new):
+            new_split = itertools.repeat('', len(new) - len(new_split))
         for tag, i1, i2, j1, j2 in opcodes:
             if tag == 'equal':
                 for i in range(i2-i1):

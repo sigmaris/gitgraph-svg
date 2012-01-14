@@ -8,6 +8,7 @@ Dependencies required
  * [BeautifulSoup](http://www.crummy.com/software/BeautifulSoup/) for encoding detection and Unicode conversion.
  * [Flask](http://flask.pocoo.org/)
  * [Pygments](http://pygments.org/)
+ * [chardet](http://pypi.python.org/pypi/chardet)
 
 To run
 ------
