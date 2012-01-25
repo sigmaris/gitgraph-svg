@@ -163,8 +163,8 @@ class TreeDiffer(object):
             else:
                 lexer = guess_lexer(new_joined, stripnl=False, encoding='chardet')
         except ClassNotFound:
-            old_split = old
-            new_split = new
+            old_split = map(escape, old)
+            new_split = map(escape, new)
         else:
             old_split = highlight(old_joined, lexer, self.formatter).splitlines()
             new_split = highlight(new_joined, lexer, self.formatter).splitlines()

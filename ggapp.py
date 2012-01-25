@@ -142,7 +142,7 @@ def get_blob(obj, filename_hint=None):
                 else:
                     lexer = guess_lexer(obj.data, stripnl=False, encoding='chardet')
             except ClassNotFound:
-                highlighted = ggutils.force_unicode(obj.data)
+                highlighted = escape(ggutils.force_unicode(obj.data))
             else:
                 highlighted = highlight(obj.data, lexer, HtmlFormatter(nowrap=True))
             if highlighted:
