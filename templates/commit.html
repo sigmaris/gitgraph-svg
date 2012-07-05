@@ -10,9 +10,9 @@
   <h1>{{title}}</h1>
   <dl class="commit_info">
     <dt>Author</dt>
-    <dd>{{author[0]}} &lt;<a href="mailto:{{author[1]}}">{{author[1]}}</a>&gt;<br />{{author_time}}</dd>
+    <dd>{{author.name}} &lt;<a href="mailto:{{author.email}}">{{author.email}}</a>&gt;<br />{{author_time}}</dd>
     <dt>Committer</dt>
-    <dd>{{committer[0]}} &lt;<a href="mailto:{{committer[1]}}">{{committer[1]}}</a>&gt;<br />{{commit_time}}</dd>
+    <dd>{{committer.name}} &lt;<a href="mailto:{{committer.email}}">{{committer.email}}</a>&gt;<br />{{commit_time}}</dd>
     <dt>Commit</dt>
     <dd>{{commit.hex}}</dd>
     <dt>Tree</dt>
