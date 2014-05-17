@@ -12,6 +12,10 @@ Dependencies required
 
 To run
 ------
+First install [libgit2](http://libgit2.github.com/) v0.17. Then:
+
+    pip install -r requirements.txt
+
 Edit settings.py.example to set the path of your repository and run:
 
     python ggapp.py
